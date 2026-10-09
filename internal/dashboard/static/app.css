@@ -207,3 +207,43 @@ button { font: inherit; }
 [hidden] { display: none !important; }
 
 .peer { overflow-wrap: anywhere; }
+
+.brand { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.tabs { display: flex; gap: 14px; }
+.tabs a { color: var(--ink-2); text-decoration: none; padding-bottom: 2px; border-bottom: 2px solid transparent; }
+.tabs a:hover { color: var(--ink); }
+.tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--series-1); font-weight: 500; }
+
+.notice { margin: 0; padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--ink-2); }
+code { font-family: ui-monospace, monospace; font-size: 0.92em; }
+.help { color: var(--muted); font-size: 12.5px; margin: 4px 0 0; }
+.help .link { font-size: inherit; color: var(--ink-2); }
+.auth { display: flex; align-items: end; gap: 16px; flex-wrap: wrap; }
+.auth .help { margin: 0 0 7px; }
+.btn {
+  background: none; color: var(--ink); border: 1px solid var(--border); border-radius: 6px;
+  padding: 6px 14px; cursor: pointer;
+}
+.btn:disabled, .primary:disabled, .danger:disabled { opacity: 0.4; cursor: default; }
+select {
+  font: inherit; color: var(--ink); background: var(--page);
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; width: 100%;
+}
+fieldset.services-pick { border: 0; padding: 0; margin: 16px 0 0; }
+fieldset.services-pick legend { font-weight: 500; padding: 0; }
+.checks { display: grid; gap: 6px 16px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); margin-top: 8px; }
+.checks label { display: flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
+.checks input { width: auto; margin: 0; }
+.server-form .checks { grid-template-columns: minmax(0, 1fr); }
+.status.err, .server-last.err { color: var(--critical); }
+.status.ok, .server-last.ok { color: var(--good); }
+
+.servers { display: grid; gap: 12px; margin-top: 12px; }
+.server { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.server-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px 12px; flex-wrap: wrap; }
+.server-url { color: var(--ink-2); font-family: ui-monospace, monospace; font-size: 12.5px; overflow-wrap: anywhere; }
+.server-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.server-last { margin: 6px 0 0; overflow-wrap: anywhere; }
+.server .save-row { margin-top: 10px; gap: 8px; }
+.server-form { border-top: 1px solid var(--grid); margin-top: 16px; padding-top: 16px; }
+.server-form h3 { font-size: 14px; margin: 0 0 12px; font-weight: 600; }

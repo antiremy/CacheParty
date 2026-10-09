@@ -31,6 +31,7 @@ internal/ratelimit/ shared download rate limit for upstream connections
 internal/accesslog/ cachelog / cachelog-json / stream log writers
 internal/metrics/   Prometheus text renderer
 internal/dashboard/ web dashboard, its API and the throughput sampler
+internal/dnssync/   cache-domains sync to Pi-hole, AdGuard Home, Technitium
 bench/              load generator, fake origin and DNS, compose file
 docs/               user and design documentation
 ```

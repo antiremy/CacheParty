@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CacheParty DNS sync</title>
+<link rel="stylesheet" href="app.css">
+<script src="dns.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <div>
+    <div class="brand">
+      <h1>CacheParty</h1>
+      <nav class="tabs" aria-label="Pages"><a href="./">Overview</a><a href="dns.html" aria-current="page">DNS sync</a></nav>
+    </div>
+    <p class="sub">Point the cache-domains names at this cache on your own DNS server, instead of running lancache-dns.</p>
+  </div>
+</header>
+
+<main>
+  <p class="notice" id="dns-off" hidden>DNS sync is off. Set <code>DNS_SYNC_FILE</code> (it defaults to <code>/data/dns-sync.json</code>) to turn it on.</p>
+  <p class="notice" id="dns-readonly" hidden>Read-only. Set the <code>DASHBOARD_PASSWORD</code> environment variable to set up DNS sync from here.</p>
+
+  <div id="dns-main" class="stack" hidden>
+    <section class="card editable auth">
+      <label class="pw">Dashboard password
+        <input type="password" id="password" autocomplete="current-password">
+      </label>
+      <p class="help">Needed to save, sync or remove anything on this page.</p>
+    </section>
+
+    <section class="card" aria-labelledby="h-target">
+      <div class="card-head"><h2 id="h-target">What to publish</h2></div>
+      <form id="addr-form" autocomplete="off">
+        <div class="setting">
+          <label for="ips">Cache IP addresses</label>
+          <div class="help">The addresses clients should reach this cache on, separated by spaces or commas. Each name gets one record per address.</div>
+          <div class="row"><input id="ips" placeholder="192.168.1.10"></div>
+          <div class="help" id="detected"></div>
+        </div>
+        <fieldset class="services-pick">
+          <legend>Services</legend>
+          <p class="help">Unchecked services are left out, and records added for them earlier are removed at the next sync.</p>
+          <div id="services" class="checks"></div>
+        </fieldset>
+        <div class="save-row editable">
+          <button type="submit" id="addr-save" class="primary">Save</button>
+          <span id="addr-status" role="status" class="small"></span>
+        </div>
+      </form>
+    </section>
+
+    <section class="card" aria-labelledby="h-servers">
+      <div class="card-head">
+        <h2 id="h-servers">DNS servers</h2>
+        <button type="button" class="btn editable" id="add-server">Add a server</button>
+      </div>
+      <p class="muted small">A sync adds the records that are missing and removes the ones it added earlier that are no longer wanted. It never touches records it did not add.</p>
+      <div id="servers" class="servers"></div>
+      <p class="empty muted" id="servers-empty">No servers yet.</p>
+
+      <form id="server-form" class="server-form" autocomplete="off" hidden>
+        <h3 id="server-form-title">Add a server</h3>
+        <div class="settings">
+          <div class="setting">
+            <label for="kind">Server</label>
+            <div class="row">
+              <select id="kind">
+                <option value="pihole">Pi-hole (v6 or later)</option>
+                <option value="adguard">AdGuard Home</option>
+                <option value="technitium">Technitium DNS Server</option>
+              </select>
+            </div>
+          </div>
+          <div class="setting">
+            <label for="url">Web interface address</label>
+            <div class="row"><input id="url" required></div>
+          </div>
+          <div class="setting" id="username-row">
+            <label for="username">Username</label>
+            <div class="row"><input id="username" autocomplete="off"></div>
+          </div>
+          <div class="setting">
+            <label for="secret" id="secret-label">Password</label>
+            <div class="row"><input type="password" id="secret" autocomplete="new-password"></div>
+          </div>
+        </div>
+        <p class="help" id="kind-help"></p>
+        <div class="checks">
+          <label><input type="checkbox" id="auto"> Keep in sync: sync at startup and every 6 hours</label>
+          <label><input type="checkbox" id="insecure"> Accept a self-signed HTTPS certificate</label>
+        </div>
+        <div class="save-row">
+          <button type="submit" class="primary" id="server-save">Save server</button>
+          <button type="button" class="btn" id="server-cancel">Cancel</button>
+          <span id="server-status" role="status" class="small"></span>
+        </div>
+      </form>
+    </section>
+
+  </div>
+</main>
+</body>
+</html>
