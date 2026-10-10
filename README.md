@@ -12,6 +12,8 @@ It is meant as a drop-in replacement: same environment variables, same
 `access.log` format. Non-goals: caching HTTPS (`:443` is a blind SNI
 passthrough), reading nginx's on-disk cache format.
 
+[![The CacheParty dashboard during a Steam download: throughput to clients and from the internet, and cache disk reads and writes](docs/images/dashboard-charts.png)](docs/monitoring.md#dashboard)
+
 ## Advantages over stock lancache
 
 ### Faster downloads
