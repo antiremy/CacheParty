@@ -11,6 +11,8 @@ served from cache, a per-service table (cache identifier, so `steam`,
 `epicgames` and so on), cache usage against its limit, request counts and
 `:443` passthrough traffic.
 
+![The full CacheParty dashboard during a Steam download, with per-service, per-client, upstream domain and HTTPS domain tables, storage, request counts and network addresses](images/dashboard.png)
+
 Bytes are counted as they move rather than when a request ends, so a long
 download shows as steady throughput, not a spike at the end. "From the
 internet" includes read-ahead, so for a moment it can exceed what clients

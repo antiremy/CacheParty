@@ -12,6 +12,8 @@ It is meant as a drop-in replacement: same environment variables, same
 `access.log` format. Non-goals: caching HTTPS (`:443` is a blind SNI
 passthrough), reading nginx's on-disk cache format.
 
+[![The CacheParty dashboard during a Steam download: throughput to clients and from the internet, and cache disk reads and writes](docs/images/dashboard-charts.png)](docs/monitoring.md#dashboard)
+
 ## Advantages over stock lancache
 
 ### Faster downloads
@@ -32,6 +34,9 @@ passthrough), reading nginx's on-disk cache format.
 
 ### Easier to run
 
+- **Internet download speed limit.** `UPSTREAM_RATE_LIMIT` (e.g. `500m`)
+  caps how much internet bandwidth the cache uses, so a big download doesn't
+  slow down the rest of the network. Cache hits still run at full LAN speed.
 - **Fast restarts.** A persistent chunk index (bbolt) means startup does not
   walk millions of files.
 - **Built-in dashboard.** Live throughput, cache hit share, and per-service,
@@ -44,9 +49,8 @@ passthrough), reading nginx's on-disk cache format.
   requested, `cacheparty verify` checks the whole cache without reading chunk
   contents, and `cacheparty purge` (or the dashboard) removes one game. See
   [Cache repair](docs/cache-repair.md).
-- **Upstream rate limit and bypass domains.** `UPSTREAM_RATE_LIMIT` caps the
-  cache's total internet usage, and `BYPASS_DOMAINS` sends chosen hosts
-  straight through uncached.
+- **Bypass domains.** `BYPASS_DOMAINS` sends chosen hosts straight through
+  uncached.
 
 ### Safer caching
 
@@ -62,8 +66,17 @@ nginx lancache and the known limitations.
 ## Quick start
 
 ```sh
-docker run -p 80:80 -p 443:443 -p 8080:8080 -v cacheparty-data:/data ghcr.io/antiremy/cacheparty
+docker run -d --name cacheparty --restart unless-stopped \
+  -p 80:80 -p 443:443 -p 8080:8080 \
+  -v /srv/cacheparty:/data \
+  -v /mnt/cache:/data/cache \
+  ghcr.io/antiremy/cacheparty
 ```
+
+`/data` holds logs, settings, dashboard stats and the cache-domains checkout;
+`/data/cache` holds the cached chunks and their index, so mount it from the big
+disk. Swap in your own host paths. CacheParty can't read nginx's cache format,
+so give it an empty directory rather than an existing monolithic cache.
 
 The image is published to GHCR and Docker Hub for amd64 and arm64: `latest`
 tracks `main`, and releases are tagged by version (`1.2.3`, `1.2`, `1`).
