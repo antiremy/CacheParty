@@ -473,7 +473,7 @@ func TestDNSSyncOff(t *testing.T) {
 
 func TestServesPage(t *testing.T) {
 	srv, _ := newTestDashboard(t, "")
-	for _, path := range []string{"/", "/app.js", "/app.css", "/dns.html", "/dns.js"} {
+	for _, path := range []string{"/", "/app.js", "/app.css", "/dns.html", "/dns.js", "/favicon.svg"} {
 		resp, err := http.Get(srv.URL + path)
 		if err != nil {
 			t.Fatal(err)
