@@ -80,6 +80,15 @@ DNS server you already have:
   forwards to `this-server`, holding the A/AAAA records, so other names in
   the zone resolve as before. Needs an API token.
 
+For Technitium, the
+[LANCache-TDNSApp](https://github.com/ruifung/LANCache-TDNSApp) DNS app is
+the better choice: it does the job of `lancache-dns` inside Technitium,
+fetching and refreshing cache-domains itself, so nothing needs syncing.
+Install its ZIP under **Apps**, then set `lanCacheEnabled` to `true`,
+`globalCacheAddresses` to the cache's address and `enabledCaches` to `[]`
+(its default caches Steam only). Use DNS sync for Technitium only if you
+can't install apps.
+
 Set the address clients should reach the cache on (in a container, the
 host's address rather than the container's), untick any services to leave
 out, and add each server. **Preview** shows what a sync would change;

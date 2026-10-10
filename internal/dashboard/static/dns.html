@@ -87,6 +87,7 @@
           </div>
         </div>
         <p class="help" id="kind-help"></p>
+        <p class="notice" id="technitium-app" hidden>Recommended for Technitium instead: the <a href="https://github.com/ruifung/LANCache-TDNSApp" target="_blank" rel="noopener noreferrer">LANCache-TDNSApp</a> DNS app. It does the job of lancache-dns inside Technitium, fetching and refreshing cache-domains itself, so there is nothing to sync from here. Install its ZIP under Apps, then in its config set <code>lanCacheEnabled</code> to <code>true</code>, <code>globalCacheAddresses</code> to this cache's address, and <code>enabledCaches</code> to <code>[]</code> (its default caches Steam only). Use the sync below only if you can't install apps.</p>
         <div class="checks">
           <label><input type="checkbox" id="auto"> Keep in sync: sync at startup and every 6 hours</label>
           <label><input type="checkbox" id="insecure"> Accept a self-signed HTTPS certificate</label>

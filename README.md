@@ -40,7 +40,9 @@ passthrough), reading nginx's on-disk cache format.
 - **DNS sync instead of lancache-dns.** The dashboard can point the
   cache-domains names at the cache on a Pi-hole, AdGuard Home or Technitium
   server you already run, and keep them in sync. See
-  [DNS sync](docs/monitoring.md#dns-sync).
+  [DNS sync](docs/monitoring.md#dns-sync). On Technitium, the
+  [LANCache-TDNSApp](https://github.com/ruifung/LANCache-TDNSApp) DNS app is
+  recommended instead: it fetches and refreshes cache-domains itself.
 - **Live settings.** Cache size, free-space floor, max age, read-ahead,
   upstream rate limit and bypass domains can be changed from the dashboard
   without a restart.

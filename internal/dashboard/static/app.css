@@ -247,3 +247,5 @@ fieldset.services-pick legend { font-weight: 500; padding: 0; }
 .server .save-row { margin-top: 10px; gap: 8px; }
 .server-form { border-top: 1px solid var(--grid); margin-top: 16px; padding-top: 16px; }
 .server-form h3 { font-size: 14px; margin: 0 0 12px; font-weight: 600; }
+.server-form .notice { margin-top: 12px; }
+.notice a { color: var(--ink); }

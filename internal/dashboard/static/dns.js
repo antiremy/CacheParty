@@ -255,6 +255,7 @@ function kindChanged() {
   $("secret-label").textContent = k.secret;
   $("kind-help").textContent = k.help;
   $("username-row").hidden = $("kind").value !== "adguard";
+  $("technitium-app").hidden = $("kind").value !== "technitium";
   const keeps = editing && editing.hasSecret && editing.kind === $("kind").value;
   $("secret").placeholder = keeps ? "unchanged" : "";
 }
