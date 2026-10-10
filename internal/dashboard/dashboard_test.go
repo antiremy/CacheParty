@@ -404,7 +404,7 @@ func TestSettingsReadOnlyWithoutPassword(t *testing.T) {
 
 func TestServesPage(t *testing.T) {
 	srv, _ := newTestDashboard(t, "")
-	for _, path := range []string{"/", "/app.js", "/app.css"} {
+	for _, path := range []string{"/", "/app.js", "/app.css", "/favicon.svg"} {
 		resp, err := http.Get(srv.URL + path)
 		if err != nil {
 			t.Fatal(err)
