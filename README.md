@@ -66,8 +66,17 @@ nginx lancache and the known limitations.
 ## Quick start
 
 ```sh
-docker run -p 80:80 -p 443:443 -p 8080:8080 -v cacheparty-data:/data ghcr.io/antiremy/cacheparty
+docker run -d --name cacheparty --restart unless-stopped \
+  -p 80:80 -p 443:443 -p 8080:8080 \
+  -v /srv/cacheparty:/data \
+  -v /mnt/cache:/data/cache \
+  ghcr.io/antiremy/cacheparty
 ```
+
+`/data` holds logs, settings, dashboard stats and the cache-domains checkout;
+`/data/cache` holds the cached chunks and their index, so mount it from the big
+disk. Swap in your own host paths. CacheParty can't read nginx's cache format,
+so give it an empty directory rather than an existing monolithic cache.
 
 The image is published to GHCR and Docker Hub for amd64 and arm64: `latest`
 tracks `main`, and releases are tagged by version (`1.2.3`, `1.2`, `1`).
