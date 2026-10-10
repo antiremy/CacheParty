@@ -34,6 +34,9 @@ passthrough), reading nginx's on-disk cache format.
 
 ### Easier to run
 
+- **Internet download speed limit.** `UPSTREAM_RATE_LIMIT` (e.g. `500m`)
+  caps how much internet bandwidth the cache uses, so a big download doesn't
+  slow down the rest of the network. Cache hits still run at full LAN speed.
 - **Fast restarts.** A persistent chunk index (bbolt) means startup does not
   walk millions of files.
 - **Built-in dashboard.** Live throughput, cache hit share, and per-service,
@@ -46,9 +49,8 @@ passthrough), reading nginx's on-disk cache format.
   requested, `cacheparty verify` checks the whole cache without reading chunk
   contents, and `cacheparty purge` (or the dashboard) removes one game. See
   [Cache repair](docs/cache-repair.md).
-- **Upstream rate limit and bypass domains.** `UPSTREAM_RATE_LIMIT` caps the
-  cache's total internet usage, and `BYPASS_DOMAINS` sends chosen hosts
-  straight through uncached.
+- **Bypass domains.** `BYPASS_DOMAINS` sends chosen hosts straight through
+  uncached.
 
 ### Safer caching
 
