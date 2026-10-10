@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"cacheparty/internal/config"
+	"cacheparty/internal/dnssync"
+	"cacheparty/internal/domains"
 )
 
 func TestHistoryRatesAndResolutions(t *testing.T) {
@@ -402,9 +404,76 @@ func TestSettingsReadOnlyWithoutPassword(t *testing.T) {
 	}
 }
 
+func TestDNSSync(t *testing.T) {
+	// An AdGuard Home that accepts anything.
+	var added []string
+	agh := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/control/rewrite/list":
+			io.WriteString(w, "[]")
+		case "/control/rewrite/add":
+			b, _ := io.ReadAll(r.Body)
+			added = append(added, string(b))
+		}
+	}))
+	defer agh.Close()
+	m, err := dnssync.Open(filepath.Join(t.TempDir(), "dns.json"), []domains.Pattern{{Service: "steam", Pattern: "*.steamcontent.com"}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv, _ := newTestDashboard(t, "hunter2", func(c *Config) { c.DNSSync = m })
+
+	if code, _ := send(t, srv, "PUT", "/api/dns", `{"ips":["10.0.0.5"]}`, "", nil); code != http.StatusUnauthorized {
+		t.Fatalf("no password: %d", code)
+	}
+	if code, body := send(t, srv, "PUT", "/api/dns", `{"ips":["nope"]}`, "hunter2", nil); code != http.StatusBadRequest {
+		t.Fatalf("bad address: %d %s", code, body)
+	}
+	if code, body := send(t, srv, "PUT", "/api/dns", `{"ips":["10.0.0.5"]}`, "hunter2", nil); code != http.StatusOK {
+		t.Fatalf("set address: %d %s", code, body)
+	}
+	code, body := send(t, srv, "POST", "/api/dns/servers", `{"kind":"adguard","url":"`+agh.URL+`","username":"admin","secret":"agh-pass"}`, "hunter2", nil)
+	if code != http.StatusOK || strings.Contains(body, "agh-pass") {
+		t.Fatalf("add server: %d %s", code, body)
+	}
+	var st dnsJSON
+	json.Unmarshal([]byte(body), &st)
+	if !st.Enabled || !st.Editable || len(st.Targets) != 1 || !st.Targets[0].HasSecret || len(st.Services) != 1 {
+		t.Fatalf("state %+v", st)
+	}
+	id := st.Targets[0].ID
+
+	code, body = send(t, srv, "POST", "/api/dns/servers/"+id+"/sync", `{}`, "hunter2", nil)
+	var res dnsSyncJSON
+	json.Unmarshal([]byte(body), &res)
+	if code != http.StatusOK || res.Result.Added != 1 || res.Result.Error != "" || res.State.Targets[0].Managed != 1 {
+		t.Fatalf("sync: %d %s", code, body)
+	}
+	if len(added) != 1 || !strings.Contains(added[0], `"*.steamcontent.com"`) {
+		t.Fatalf("AdGuard got %q", added)
+	}
+	if code, _ := send(t, srv, "POST", "/api/dns/servers/nope/sync", `{}`, "hunter2", nil); code != http.StatusNotFound {
+		t.Fatalf("unknown server: %d", code)
+	}
+	if code, body := send(t, srv, "DELETE", "/api/dns/servers/"+id, ``, "hunter2", nil); code != http.StatusOK {
+		t.Fatalf("delete: %d %s", code, body)
+	}
+}
+
+func TestDNSSyncOff(t *testing.T) {
+	srv, _ := newTestDashboard(t, "hunter2")
+	if code, _ := send(t, srv, "PUT", "/api/dns", `{"ips":["10.0.0.5"]}`, "hunter2", nil); code != http.StatusNotFound {
+		t.Fatalf("change with sync off: %d", code)
+	}
+	code, body := send(t, srv, "GET", "/api/dns", "", "", nil)
+	if code != http.StatusOK || !strings.Contains(body, `"enabled":false`) {
+		t.Fatalf("state with sync off: %d %s", code, body)
+	}
+}
+
 func TestServesPage(t *testing.T) {
 	srv, _ := newTestDashboard(t, "")
-	for _, path := range []string{"/", "/app.js", "/app.css"} {
+	for _, path := range []string{"/", "/app.js", "/app.css", "/dns.html", "/dns.js", "/favicon.svg"} {
 		resp, err := http.Get(srv.URL + path)
 		if err != nil {
 			t.Fatal(err)

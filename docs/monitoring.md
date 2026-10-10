@@ -59,13 +59,50 @@ a read even though the disk itself was idle.
 
 The **Network** card lists the server's IPv4 and IPv6 addresses, by interface
 (loopback and link-local addresses are left out), so you know what to point
-`lancache-dns` at. In a container these are the container's addresses unless
+`lancache-dns` at (or see [DNS sync](#dns-sync)). In a container these are the container's addresses unless
 it uses host networking.
 
 ### Settings
 
 Some settings can be changed from the dashboard while running; see
 [Live settings](configuration.md#live-settings).
+
+### DNS sync
+
+Instead of running `lancache-dns`, the dashboard's **DNS sync** page
+(`http://<cache>:8080/dns.html`) can publish the cache-domains names to a
+DNS server you already have:
+
+- **Pi-hole** v6 or later: `address=/domain/ip` lines in
+  `misc.dnsmasq_lines`, which also answer for every name under each domain.
+  Pi-hole restarts its resolver after each change. An app password is best.
+- **AdGuard Home**: DNS rewrites, with the same `*.example.com` meaning as
+  cache-domains. Uses the web interface's username and password.
+- **Technitium DNS Server**: a conditional forwarder zone per domain that
+  forwards to `this-server`, holding the A/AAAA records, so other names in
+  the zone resolve as before. Needs an API token.
+
+For Technitium, the
+[LANCache-TDNSApp](https://github.com/ruifung/LANCache-TDNSApp) DNS app is
+the better choice: it does the job of `lancache-dns` inside Technitium,
+fetching and refreshing cache-domains itself, so nothing needs syncing.
+Install its ZIP under **Apps**, then set `lanCacheEnabled` to `true`,
+`globalCacheAddresses` to the cache's address and `enabledCaches` to `[]`
+(its default caches Steam only). Use DNS sync for Technitium only if you
+can't install apps.
+
+Set the address clients should reach the cache on (in a container, the
+host's address rather than the container's), untick any services to leave
+out, and add each server. **Preview** shows what a sync would change;
+**Sync now** adds the missing records and removes the ones it added earlier
+that are no longer wanted (a domain left the list, a service was unticked,
+the address changed). Records it did not add are never touched. **Remove
+records** takes off everything it added. Servers marked "keep in sync" are
+synced at startup, after cache-domains is refreshed, and every 6 hours.
+
+The servers, their passwords or tokens and the records added to each are
+kept in `DNS_SYNC_FILE` (mode `0600`). Passwords are never sent back to the
+page. Changes need `DASHBOARD_PASSWORD`.
 
 ### What survives a restart
 
@@ -81,7 +118,7 @@ keep its label count small.
 ### Security
 
 Viewing is open to anyone who can reach `:8080`, like `/metrics`. Changing
-settings, and checking or purging the cache, needs `DASHBOARD_PASSWORD`, sent
+settings, checking or purging the cache, and DNS sync need `DASHBOARD_PASSWORD`, sent
 as a bearer token; without it the settings are read-only, which is the
 default because guests at a LAN party share the network. Wrong passwords are
 answered one a second. The page is served from the binary (no CDN) with a

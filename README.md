@@ -42,6 +42,12 @@ passthrough), reading nginx's on-disk cache format.
 - **Built-in dashboard.** Live throughput, cache hit share, and per-service,
   per-game, per-client and per-CDN-host traffic, at `http://<host>:8080/`,
   plus Prometheus `/metrics`. See [Dashboard, metrics and logs](docs/monitoring.md).
+- **DNS sync instead of lancache-dns.** The dashboard can point the
+  cache-domains names at the cache on a Pi-hole, AdGuard Home or Technitium
+  server you already run, and keep them in sync. See
+  [DNS sync](docs/monitoring.md#dns-sync). On Technitium, the
+  [LANCache-TDNSApp](https://github.com/ruifung/LANCache-TDNSApp) DNS app is
+  recommended instead: it fetches and refreshes cache-domains itself.
 - **Live settings.** Cache size, free-space floor, max age, read-ahead,
   upstream rate limit and bypass domains can be changed from the dashboard
   without a restart.
@@ -84,7 +90,8 @@ Each [GitHub release](https://github.com/antiremy/CacheParty/releases) also
 has static `linux/amd64` and `linux/arm64` binaries. To build the image
 yourself, run `docker build -t cacheparty .`.
 
-Then point `lancache-dns` at the host's IP and open `http://<host>:8080/` for
+Then point `lancache-dns` at the host's IP (or use the dashboard's
+[DNS sync](docs/monitoring.md#dns-sync) page) and open `http://<host>:8080/` for
 the dashboard. The image is built on `distroless/static`, runs as root so it
 can bind `:80`/`:443`, and has a `HEALTHCHECK` that calls
 `/cacheparty healthcheck` (a request to `/lancache-heartbeat`).

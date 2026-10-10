@@ -4,13 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CacheParty dashboard</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="app.css">
 <script src="app.js" defer></script>
 </head>
 <body>
 <header class="top">
   <div>
-    <h1>CacheParty</h1>
+    <div class="brand">
+      <h1>CacheParty</h1>
+      <nav class="tabs" aria-label="Pages"><a href="./" aria-current="page">Overview</a><a href="dns.html">DNS sync</a></nav>
+    </div>
     <p class="sub"><span id="hostname">—</span> · <span id="version">—</span> · up <span id="uptime">—</span> · <span id="conn" class="conn">connecting…</span></p>
   </div>
   <div class="seg" role="group" aria-label="Time range">
