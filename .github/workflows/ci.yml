@@ -12,9 +12,7 @@ concurrency:
 
 jobs:
   test:
-    # Fork PRs run untrusted code, so they get a throwaway GitHub-hosted
-    # runner; only branches in this repo use the persistent self-hosted one.
-    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -28,6 +26,6 @@ jobs:
             exit 1
           fi
       - run: go vet ./...
-      # -count=1: the self-hosted runner keeps Go's test cache between runs,
+      # -count=1: setup-go restores Go's build cache, test results included,
       # and a cached pass would hide a flaky test.
       - run: go test -count=1 ./...
