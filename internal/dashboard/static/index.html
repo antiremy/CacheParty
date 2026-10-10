@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CacheParty dashboard</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>CacheParty</h1>
+    <p class="sub"><span id="hostname">—</span> · <span id="version">—</span> · up <span id="uptime">—</span> · <span id="conn" class="conn">connecting…</span></p>
+  </div>
+  <div class="seg" role="group" aria-label="Time range">
+    <button type="button" data-range="15m" aria-pressed="true">15 min</button>
+    <button type="button" data-range="24h" aria-pressed="false">24 h</button>
+  </div>
+</header>
+
+<main>
+  <section class="tiles" aria-label="Current throughput">
+    <div class="tile">
+      <div class="tile-label"><span class="key key-1"></span>To clients</div>
+      <div class="tile-value" id="t-sent">—</div>
+      <div class="tile-note">last 5 s</div>
+    </div>
+    <div class="tile">
+      <div class="tile-label"><span class="key key-2"></span>From the internet</div>
+      <div class="tile-value" id="t-fetched">—</div>
+      <div class="tile-note">last 5 s</div>
+    </div>
+    <div class="tile">
+      <div class="tile-label">Served from cache</div>
+      <div class="tile-value" id="t-ratio">—</div>
+      <div class="tile-note" id="t-ratio-note">of bytes sent, this range</div>
+    </div>
+    <div class="tile">
+      <div class="tile-label">Active requests</div>
+      <div class="tile-value" id="t-active">—</div>
+      <div class="tile-note">on the HTTP listener</div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="h-throughput">
+    <div class="card-head">
+      <h2 id="h-throughput">Throughput</h2>
+      <div class="legend">
+        <span><span class="key key-1"></span>To clients</span>
+        <span><span class="key key-2"></span>From the internet</span>
+      </div>
+    </div>
+    <div class="chart" id="chart-main"></div>
+    <details class="table-view">
+      <summary>Show as table</summary>
+      <div class="scroll"><table id="table-main"><thead><tr><th>Time</th><th class="num">To clients</th><th class="num">From the internet</th></tr></thead><tbody></tbody></table></div>
+    </details>
+  </section>
+
+  <section class="card" aria-labelledby="h-disk">
+    <div class="card-head">
+      <h2 id="h-disk">Cache disk</h2>
+      <div class="legend">
+        <span><span class="key key-1"></span>Read <b id="d-read">—</b></span>
+        <span><span class="key key-2"></span>Written <b id="d-write">—</b></span>
+      </div>
+    </div>
+    <div class="chart chart-mid" id="chart-disk"></div>
+    <p class="muted small" id="d-note">Chunk data read to serve hits and written while filling the cache.</p>
+  </section>
+
+  <section class="card" aria-labelledby="h-services">
+    <div class="card-head">
+      <h2 id="h-services"><button type="button" class="crumb" id="apps-back" disabled>Services</button><span id="apps-title" hidden> › <span id="apps-service"></span></span></h2>
+      <span class="muted small totals-span">all time</span>
+    </div>
+    <div id="services-view">
+      <div class="scroll">
+        <table class="services">
+          <thead><tr><th>Service</th><th class="num">Now</th><th class="num">Served</th><th class="num">Downloaded</th><th>From cache</th></tr></thead>
+          <tbody id="services"></tbody>
+        </table>
+      </div>
+      <p class="empty muted" id="services-empty">No downloads yet.</p>
+      <p class="muted small" id="services-hint" hidden>Select a service to see what was downloaded through it.</p>
+    </div>
+    <div id="apps-view" hidden>
+      <div class="scroll">
+        <table class="services">
+          <thead><tr><th id="apps-kind">Download</th><th class="num">Now</th><th class="num">Served</th><th class="num">Downloaded</th><th>From cache</th><th class="num">Last active</th><th id="apps-actions" hidden><span class="sr-only">Cache</span></th></tr></thead>
+          <tbody id="apps"></tbody>
+        </table>
+      </div>
+      <p class="empty muted" id="apps-empty">Nothing downloaded through this service yet.</p>
+      <form id="purge" class="purge" autocomplete="off" hidden>
+        <h3 id="purge-title"></h3>
+        <div class="save-row">
+          <label class="pw">Dashboard password
+            <input type="password" id="purge-password" autocomplete="current-password">
+          </label>
+          <button type="submit" id="purge-check">Check what is cached</button>
+        </div>
+        <p id="purge-status" role="status" class="small"></p>
+        <div class="save-row">
+          <button type="button" id="purge-go" class="danger" hidden>Remove from cache</button>
+          <button type="button" id="purge-cancel">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <div class="masonry" id="cards">
+    <section class="card" aria-labelledby="h-clients">
+      <div class="card-head"><h2 id="h-clients">Clients</h2><span class="muted small totals-span">all time</span></div>
+      <div class="scroll list-scroll">
+        <table class="services">
+          <thead><tr><th>Client IP</th><th class="num">Now</th><th class="num">Served</th><th class="num">Downloaded</th><th>From cache</th></tr></thead>
+          <tbody id="clients"></tbody>
+        </table>
+      </div>
+      <p class="empty muted" id="clients-empty">No clients yet.</p>
+    </section>
+
+    <section class="card" aria-labelledby="h-upstreams">
+      <div class="card-head"><h2 id="h-upstreams">Upstream domains</h2><span class="muted small">downloaded from each, <span class="totals-span">all time</span></span></div>
+      <div class="scroll list-scroll">
+        <table class="services">
+          <thead><tr><th>Domain</th><th class="num">Now</th><th class="num">Downloaded</th></tr></thead>
+          <tbody id="upstreams"></tbody>
+        </table>
+      </div>
+      <p class="empty muted" id="upstreams-empty">Nothing downloaded yet.</p>
+    </section>
+
+    <section class="card" aria-labelledby="h-https" id="https-card" hidden>
+      <div class="card-head"><h2 id="h-https">HTTPS domains</h2><span class="muted small">relayed, not cached, <span class="totals-span">all time</span></span></div>
+      <div class="scroll list-scroll">
+        <table class="services">
+          <thead><tr><th>Domain</th><th class="num">Now</th><th class="num">To clients</th><th class="num">From clients</th></tr></thead>
+          <tbody id="https"></tbody>
+        </table>
+      </div>
+      <p class="empty muted" id="https-empty">No HTTPS connections yet.</p>
+    </section>
+
+    <section class="card" aria-labelledby="h-storage">
+      <div class="card-head"><h2 id="h-storage">Storage</h2><span class="muted small" id="s-pct"></span></div>
+      <div class="storage-line"><b id="s-cache">—</b> <span class="muted">of <span id="s-limit">—</span> limit</span></div>
+      <div class="meter" id="cache-meter" role="img" aria-label="Cache usage"><div id="m-cache"></div></div>
+      <div class="storage-line vol-line" id="vol-line" hidden><b id="s-vol-used">—</b> <span class="muted">of <span id="s-vol-total">—</span> on volume</span></div>
+      <div class="meter" id="vol-meter" role="img" aria-label="Volume usage" hidden><div id="m-vol"></div></div>
+      <dl class="facts">
+        <div><dt>Chunks</dt><dd id="s-chunks">—</dd></div>
+        <div><dt>Disk free</dt><dd id="s-free">—</dd></div>
+        <div><dt>Evicted</dt><dd id="s-evicted">—</dd></div>
+      </dl>
+    </section>
+
+    <section class="card" aria-labelledby="h-requests">
+      <div class="card-head"><h2 id="h-requests">Requests</h2><span class="muted small">since start</span></div>
+      <dl class="facts">
+        <div><dt>Hits</dt><dd id="r-hit">—</dd></div>
+        <div><dt>Misses</dt><dd id="r-miss">—</dd></div>
+        <div><dt>Bypassed</dt><dd id="r-bypass">—</dd></div>
+        <div><dt>Shared fetches</dt><dd id="r-coalesced">—</dd></div>
+        <div><dt>Upstream fetches</dt><dd id="r-up">—</dd></div>
+        <div><dt>Upstream errors</dt><dd id="r-uperr">—</dd></div>
+      </dl>
+    </section>
+
+    <section class="card" aria-labelledby="h-sni" id="sni-card" hidden>
+      <div class="card-head"><h2 id="h-sni">HTTPS passthrough</h2><span class="muted small" id="sni-total">—</span></div>
+      <div class="chart chart-small" id="chart-sni"></div>
+    </section>
+
+    <section class="card" aria-labelledby="h-network">
+      <div class="card-head"><h2 id="h-network">Network</h2><span class="muted small">this server</span></div>
+      <dl class="addrs">
+        <div><dt>IPv4</dt><dd id="n-ipv4">—</dd></div>
+        <div><dt>IPv6</dt><dd id="n-ipv6">—</dd></div>
+      </dl>
+    </section>
+  </div>
+
+  <section class="card" aria-labelledby="h-settings">
+    <div class="card-head"><h2 id="h-settings">Settings</h2></div>
+    <p class="muted small" id="settings-note"></p>
+    <form id="settings-form" autocomplete="off">
+      <div id="live-settings" class="settings"></div>
+      <div class="save-row" id="save-row">
+        <label class="pw">Dashboard password
+          <input type="password" id="password" autocomplete="current-password">
+        </label>
+        <button type="submit" id="save" class="primary">Save changes</button>
+        <span id="save-status" role="status" class="small"></span>
+      </div>
+    </form>
+    <details class="table-view">
+      <summary>Settings that need a restart</summary>
+      <p class="muted small">These come from environment variables and are read at startup.</p>
+      <div class="scroll"><table id="fixed-settings"><thead><tr><th>Setting</th><th>Variable</th><th>Value</th><th>Source</th></tr></thead><tbody></tbody></table></div>
+    </details>
+  </section>
+</main>
+<div class="tooltip" id="tooltip" hidden></div>
+</body>
+</html>

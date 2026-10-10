@@ -1,0 +1,50 @@
+# Both caches resolve every CDN name through `dns`, which points at `origin`,
+# so they fetch from the same fake CDN. Run via run.sh.
+name: cacheparty-bench
+
+x-cache-env: &cache-env
+  NOFETCH: "true"
+  UPSTREAM_DNS: 10.77.0.10
+  CACHE_DISK_SIZE: 20g
+  MIN_FREE_DISK: 1g
+
+services:
+  dns:
+    build: {context: .., dockerfile: bench/Dockerfile, target: bench}
+    command: ["dns", "-ip", "10.77.0.11"]
+    networks: {bench: {ipv4_address: 10.77.0.10}}
+
+  origin:
+    build: {context: .., dockerfile: bench/Dockerfile, target: bench}
+    command: ["origin", "-delay", "${ORIGIN_DELAY:-50ms}", "-rate", "${ORIGIN_RATE:-100000000}"]
+    networks: {bench: {ipv4_address: 10.77.0.11}}
+
+  cacheparty:
+    platform: ${CACHE_PLATFORM:-linux/amd64}  # same as monolithic, which is amd64-only
+    build: {context: .., dockerfile: bench/Dockerfile, target: cacheparty}
+    environment:
+      <<: *cache-env
+      DOMAINS_DIR: /domains
+      CACHE_ROOT: /data/cache
+      LOG_DIR: /data/logs
+    volumes: ["./domains:/domains:ro", "cacheparty-data:/data"]
+    networks: {bench: {ipv4_address: 10.77.0.20}}
+
+  monolithic:
+    image: lancachenet/monolithic:latest
+    platform: ${CACHE_PLATFORM:-linux/amd64}
+    environment: *cache-env
+    volumes: ["./domains:/data/cachedomains", "mono-data:/data/cache", "mono-logs:/data/logs"]
+    networks: {bench: {ipv4_address: 10.77.0.21}}
+
+  load:
+    build: {context: .., dockerfile: bench/Dockerfile, target: bench}
+    profiles: [tools]
+    entrypoint: ["/bench", "load"]
+    networks: {bench: {}}
+
+volumes: {cacheparty-data: {}, mono-data: {}, mono-logs: {}}
+
+networks:
+  bench:
+    ipam: {config: [{subnet: 10.77.0.0/24}]}

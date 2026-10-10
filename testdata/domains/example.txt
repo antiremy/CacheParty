@@ -1,0 +1,3 @@
+# local smoke-test list
+example.com
+*.example.com

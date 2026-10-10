@@ -1,0 +1,31 @@
+name: CI
+
+# Runs on every pull request, and is called by publish.yml as the gate before
+# publishing an image, so PRs are checked exactly the way main is.
+on:
+  pull_request:
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::gofmt needed on: $unformatted"
+            exit 1
+          fi
+      - run: go vet ./...
+      # -count=1: the self-hosted runner keeps Go's test cache between runs,
+      # and a cached pass would hide a flaky test.
+      - run: go test -count=1 ./...

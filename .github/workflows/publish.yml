@@ -1,0 +1,152 @@
+name: Publish image
+
+# Builds the image for amd64 and arm64 and pushes it to GHCR and Docker Hub.
+# Pushes to main publish :latest and :sha-<short>; a release publishes
+# :<version>, :<major>.<minor> and :<major>, then creates a GitHub release
+# v<version> with linux/amd64 and linux/arm64 binaries attached.
+#
+# A release is made by pushing a v* tag, or by running this workflow by hand
+# with a version (e.g. 1.2.3), which tags the selected commit as v1.2.3.
+#
+# Needs the DOCKERHUB_USERNAME variable and the DOCKERHUB_TOKEN secret (a
+# Docker Hub access token with write access) in the prod environment. GHCR
+# and the release use GITHUB_TOKEN.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version, e.g. 1.2.3 (empty publishes the image only)
+        required: false
+        type: string
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Works out the version once so the image and the release agree on it.
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release: ${{ steps.version.outputs.release }}
+    steps:
+      - id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -n "$INPUT_VERSION" ]; then
+            version="v${INPUT_VERSION#v}"
+          elif [ "$GITHUB_REF_TYPE" = tag ]; then
+            version="$GITHUB_REF_NAME"
+          else
+            echo "version=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! echo "$version" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::$version is not a semver version like v1.2.3"
+            exit 1
+          fi
+          if [ -n "$INPUT_VERSION" ] && gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$version" >/dev/null 2>&1; then
+            echo "::error::tag $version already exists"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "release=true" >> "$GITHUB_OUTPUT"
+
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: [version, test]
+    runs-on: ubuntu-latest
+    environment: prod
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # semver tags take the version explicitly so a hand-run release gets
+      # them too, not just a tag push.
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/${{ github.repository_owner }}/cacheparty
+            docker.io/${{ vars.DOCKERHUB_USERNAME }}/cacheparty
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha
+            type=semver,pattern={{version}},value=${{ needs.version.outputs.version }},enable=${{ needs.version.outputs.release }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.version.outputs.version }},enable=${{ needs.version.outputs.release }}
+            type=semver,pattern={{major}},value=${{ needs.version.outputs.version }},enable=${{ needs.version.outputs.release }}
+
+      # The dashboard shows VERSION: the tag for releases, else the commit.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: VERSION=${{ needs.version.outputs.version }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Runs after the image is pushed so a release never exists without one.
+  release:
+    needs: [version, publish]
+    if: needs.version.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      # Same flags as the Dockerfile, so the binaries match the image's.
+      - name: Build binaries
+        run: |
+          mkdir dist
+          for arch in amd64 arm64; do
+            name="cacheparty_${VERSION}_linux_${arch}"
+            CGO_ENABLED=0 GOOS=linux GOARCH=$arch \
+              go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$name/cacheparty" ./cmd/cacheparty
+            cp README.md "$name/"
+            tar -czf "dist/$name.tar.gz" "$name"
+          done
+          cd dist && sha256sum *.tar.gz > checksums.txt
+
+      # Creates the tag at this commit when the run was started by hand.
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=
+          case "$VERSION" in *-*) prerelease=--prerelease ;; esac
+          gh release create "$VERSION" dist/* \
+            --target "$GITHUB_SHA" --title "$VERSION" --generate-notes $prerelease
