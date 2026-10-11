@@ -118,3 +118,7 @@ open http://127.0.0.1:8080/         # dashboard
 - [Benchmarks](docs/benchmarks.md): methodology and results against
   monolithic.
 - [Development](docs/development.md): tests, linting and package layout.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
