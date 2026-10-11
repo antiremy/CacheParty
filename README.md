@@ -1,4 +1,4 @@
-# CacheParty
+# <img src="docs/images/cacheparty.svg" alt="" width="40" height="40"> CacheParty
 
 A single-binary Go reimplementation of
 [lancachenet/monolithic](https://github.com/lancachenet/monolithic): a LAN
