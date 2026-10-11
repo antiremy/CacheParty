@@ -1,15 +1,16 @@
 # <img src="docs/images/cacheparty.svg" alt="" width="40" height="40"> CacheParty
 
-A single-binary Go reimplementation of
-[lancachenet/monolithic](https://github.com/lancachenet/monolithic): a LAN
-game-download cache that sits behind
+A faster drop-in replacement for
+[lancache](https://github.com/lancachenet/monolithic): one binary that caches
+game downloads for your whole LAN.
+
+Like lancachenet/monolithic, it sits behind
 [lancache-dns](https://github.com/lancachenet/lancache-dns). Clients resolve CDN
 names to this machine; it caches plain-HTTP downloads from Steam, Battle.net,
 Epic, Riot, Xbox/WSUS, PlayStation and anything else in
 [cache-domains](https://github.com/uklans/cache-domains).
 
-It is meant as a drop-in replacement: same environment variables, same
-`access.log` format. Non-goals: caching HTTPS (`:443` is a blind SNI
+Drop-in means the same environment variables and the same `access.log` format. Non-goals: caching HTTPS (`:443` is a blind SNI
 passthrough), reading nginx's on-disk cache format.
 
 [![The CacheParty dashboard during a Steam download: throughput to clients and from the internet, and cache disk reads and writes](docs/images/dashboard-charts.png)](docs/monitoring.md#dashboard)
