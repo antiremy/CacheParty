@@ -27,7 +27,8 @@ passthrough), reading nginx's on-disk cache format.
   cold throughput for Steam-style many-small-file downloads is about 1.6x.
 - **Adaptive read-ahead.** After a miss, CacheParty fetches the chunks a client
   will need next, growing the window on slow origins while sharing it fairly
-  between downloads.
+  between downloads. Clients that read files forward in short ranges, like
+  Battle.net, get the chunks after each range fetched before they ask.
 - **No internal proxy hop.** Redirects are followed inside the upstream client
   instead of through a second server on `localhost:3128`.
 - **Fast domain lookup.** A hash map plus a reversed-label suffix tree instead of

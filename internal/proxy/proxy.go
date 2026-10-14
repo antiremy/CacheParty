@@ -125,6 +125,7 @@ type Handler struct {
 	maxPrefetches atomic.Int32              // limit on prefetching; see SetMaxPrefetches
 	readAheadMax  int64                     // read-ahead window limit, in chunks
 	readingAhead  atomic.Int32              // responses with a read-ahead window
+	scans         scanTracker               // clients reading objects forward range by range
 	fills         sync.WaitGroup            // running flights; see Wait
 	active        atomic.Int64              // requests being served
 	bypassHosts   atomic.Pointer[bypassSet] // BYPASS_DOMAINS; see SetBypassDomains
