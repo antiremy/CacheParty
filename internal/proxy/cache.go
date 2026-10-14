@@ -25,7 +25,9 @@ const fillIdleTimeout = 2 * time.Minute
 // cost an upstream round trip. The window starts at readAheadMin chunks and
 // doubles each time the client reaches a chunk that is still arriving (the
 // window is too shallow for the origin's latency), up to readAheadMaxBytes
-// or the response's share of the prefetch slots (see readAheadLimit).
+// or the response's share of the prefetch slots (see readAheadLimit). A
+// response that continues a forward scan reads ahead past its own range (see
+// scanTracker).
 // defaultMaxPrefetches caps how many such fetches run at once across all
 // clients unless Config.MaxPrefetches says otherwise.
 const (
@@ -199,6 +201,20 @@ func (h *Handler) serveObject(w http.ResponseWriter, rec *record, o *object, spe
 	var lr io.LimitedReader
 	ahead := false // set once a chunk comes from upstream
 	window := int64(readAheadMin)
+	horizon := last // the last chunk worth fetching ahead
+	if status == chunk.StatusPartial {
+		if sc := h.scans.observe(remoteIP(o.r), o.key, rng, time.Now()); sc != nil {
+			// A forward scan: read ahead into the ranges the client will
+			// ask for next, even if this one is cached, keeping the window
+			// it grew on earlier requests.
+			horizon = chunk.Index(meta.Size-1, slice)
+			window = sc.window.Load()
+			defer func() { sc.window.Store(window) }()
+			ahead = true
+			h.readingAhead.Add(1)
+			defer h.readingAhead.Add(-1)
+		}
+	}
 	for i := first; i <= last; i++ {
 		if src.empty() {
 			if i > first && o.r.Context().Err() != nil {
@@ -223,7 +239,7 @@ func (h *Handler) serveObject(w http.ResponseWriter, rec *record, o *object, spe
 		if ahead && o.r.Context().Err() == nil {
 			// The share is checked on every chunk, so a deep window shrinks
 			// when other downloads start and grows back when they finish.
-			for j := i + 1; j <= min(i+min(window, h.readAheadLimit()), last); j++ {
+			for j := i + 1; j <= min(i+min(window, h.readAheadLimit()), horizon); j++ {
 				h.prefetch(o, j, meta)
 			}
 		}

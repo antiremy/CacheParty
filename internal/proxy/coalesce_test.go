@@ -373,8 +373,9 @@ func TestChunkBuffersAreRecycled(t *testing.T) {
 		b := make([]byte, testSlice)
 		return &b
 	}
-	for i := 0; i < chunks; i++ {
-		// One chunk per request, so nothing is fetched ahead.
+	for i := chunks - 1; i >= 0; i-- {
+		// One chunk per request, read backwards, so nothing is fetched
+		// ahead.
 		rng := fmt.Sprintf("bytes=%d-%d", i*testSlice, (i+1)*testSlice-1)
 		if resp, _ := e.get(t, "/f", map[string]string{"Range": rng}); resp.StatusCode != 206 {
 			t.Fatalf("%s: status %d", rng, resp.StatusCode)
