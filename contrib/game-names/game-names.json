@@ -1,0 +1,18 @@
+{
+  "steam": {
+    "depot": {}
+  },
+  "blizzard": {
+    "product": {
+      "anbs": "Diablo Immortal",
+      "auks": "Call of Duty",
+      "fenris": "Diablo IV",
+      "hero-live-a": "Heroes of the Storm",
+      "hs": "Hearthstone",
+      "ovw": "Overwatch",
+      "sc1live": "StarCraft: Remastered",
+      "sc2": "StarCraft II",
+      "wow": "World of Warcraft"
+    }
+  }
+}

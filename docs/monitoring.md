@@ -23,12 +23,46 @@ as `other` (an unmatched Host is its own identifier).
 
 Clicking a service lists what was downloaded through it, with the same
 columns plus when each last moved bytes. Where the URL names the game it is
-picked out: Steam depot IDs (linked to SteamDB, which names the game),
+picked out: Steam depot IDs (linked to SteamDB),
 Blizzard product codes (`wow`, `fenris`, …) and Epic build names. Other
 services are broken down by CDN host, which often separates games too
 (`lol.dyn.riotcdn.net`, `valorant.dyn.riotcdn.net`). Up to 500 are listed
 per service. With `DASHBOARD_PASSWORD` set, each can be purged from the cache
 from there (see [Cache repair](cache-repair.md#purging-a-game)).
+
+### Game names
+
+The dashboard reads an optional `GAME_NAMES_FILE` (`/data/game-names.json`) via
+`GET /api/game-names` every five seconds. Publish this JSON atomically to update
+names without restarting CacheParty:
+
+```json
+{
+  "names": {
+    "steam": {"depot": {"214491": "Alien: Isolation", "214492": "Alien: Isolation"}},
+    "blizzard": {"product": {"wow": "World of Warcraft"}}
+  },
+  "steamAppIds": {"214491": "214490", "214492": "214490"}
+}
+```
+
+Steam depots with the same verified owner app ID become one game row. Served
+bytes, downloads and current rates are summed; last active uses the most recent
+depot. The game links to `https://steamdb.info/app/<app-id>/`. Expand its depot
+count to inspect the individual totals or purge one depot. Unknown owners stay
+separate and link to their original depot pages, even if their names match.
+Existing traffic statistics and purge IDs remain unchanged.
+
+Common Blizzard codes have built-in labels. File entries override those labels.
+An absent file leaves numeric Steam IDs; malformed, oversized (over 4 MiB) or
+unreadable files retain the last valid snapshot until restart. `off` disables
+file loading. No outside requests are made by the cache or dashboard for names.
+
+For event-driven discovery, source refresh and retry handling, see the optional
+[automatic name helper](../contrib/game-names/README.md). It watches downloads
+from every LAN client and reconciles saved traffic periodically. SteamDB remains
+the link destination; name data comes from Steam metadata and maintained
+community sources. Unverified downloads keep their original IDs.
 
 ### Clients and upstream domains
 

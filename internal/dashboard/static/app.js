@@ -1,5 +1,104 @@
 "use strict";
 
+// Display names only. Original IDs still identify statistics and purge requests.
+const DEFAULT_GAME_NAMES = {
+  blizzard: { product: {
+    anbs: "Diablo Immortal", auks: "Call of Duty", fenris: "Diablo IV",
+    "hero-live-a": "Heroes of the Storm", hs: "Hearthstone", ovw: "Overwatch",
+    sc1live: "StarCraft: Remastered", sc2: "StarCraft II", wow: "World of Warcraft",
+  } },
+  steam: { depot: {} },
+};
+let GAME_NAMES = DEFAULT_GAME_NAMES;
+let STEAM_APPS = {};
+let lastApps = null;
+const openGames = new Set();
+function depotURL(id) {
+  const app = STEAM_APPS[id];
+  return app ? `https://steamdb.info/app/${encodeURIComponent(app)}/`
+    : `https://steamdb.info/depot/${encodeURIComponent(id)}/`;
+}
+function gameName(service, app) {
+  const entries = GAME_NAMES[service]?.[app.kind];
+  const id = String(app.id);
+  if (!entries) return id;
+  const key = Object.hasOwn(entries, id) ? id : id.toLowerCase();
+  return Object.hasOwn(entries, key) ? entries[key] : id;
+}
+function groupedApps(data) {
+  if (data.service !== "steam") return data.apps;
+  const groups = new Map(), rows = [];
+  for (const depot of data.apps) {
+    const owner = depot.kind === "depot" && STEAM_APPS[depot.id];
+    if (!owner) { rows.push(depot); continue; }
+    let game = groups.get(owner);
+    if (!game) {
+      game = { ...depot, sent: 0, fetched: 0, sentRate: 0, fetchedRate: 0,
+        lastActive: 0, groupedAppId: owner, groupedDepots: [] };
+      groups.set(owner, game); rows.push(game);
+    }
+    game.groupedDepots.push(depot);
+    for (const key of ["sent", "fetched", "sentRate", "fetchedRate"]) game[key] += depot[key];
+    game.lastActive = Math.max(game.lastActive, depot.lastActive || 0);
+  }
+  return rows.sort((a, b) => b.sentRate - a.sentRate || b.sent - a.sent);
+}
+function renderDepotDetails(td, game) {
+  if (!game.groupedDepots || game.groupedDepots.length < 2) return;
+  const details = document.createElement("details");
+  details.dataset.gameApp = game.groupedAppId;
+  details.open = openGames.has(game.groupedAppId);
+  details.addEventListener("toggle", () => {
+    if (details.open) openGames.add(game.groupedAppId);
+    else openGames.delete(game.groupedAppId);
+  });
+  const summary = document.createElement("summary");
+  summary.className = "small muted";
+  summary.textContent = `${game.groupedDepots.length} depots`;
+  details.appendChild(summary);
+  const list = document.createElement("ul");
+  list.className = "small"; list.style.whiteSpace = "normal";
+  const editable = settings && settings.editable;
+  for (const depot of game.groupedDepots) {
+    const item = document.createElement("li");
+    item.textContent = `Depot ${depot.id}: ${fmtBytes(depot.sent)} served, ${fmtBytes(depot.fetched)} downloaded`;
+    if (editable) {
+      const button = document.createElement("button");
+      button.type = "button"; button.className = "link"; button.textContent = "Purge depot";
+      button.title = `Remove cached depot ${depot.id}`;
+      button.addEventListener("click", () => openPurge(depot));
+      item.append(" ", button);
+    }
+    list.appendChild(item);
+  }
+  details.appendChild(list);
+  td.appendChild(details);
+}
+async function refreshGameNames() {
+  try {
+    const res = await fetch("api/game-names", { cache: "no-store" });
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    const names = data.names;
+    const appIds = data.steamAppIds || {};
+    if (typeof appIds !== "object" || Array.isArray(appIds) ||
+        Object.values(appIds).some((id) => typeof id !== "string" || !/^[0-9]+$/.test(id))) throw new Error("Invalid app ID");
+    if (!names || typeof names !== "object" || Array.isArray(names)) throw new Error("Invalid names");
+    for (const kinds of Object.values(names)) {
+      if (!kinds || typeof kinds !== "object" || Array.isArray(kinds)) throw new Error("Invalid kinds");
+      for (const entries of Object.values(kinds)) {
+        if (!entries || typeof entries !== "object" || Array.isArray(entries) ||
+            Object.values(entries).some((name) => typeof name !== "string" || !name.trim())) throw new Error("Invalid name");
+      }
+    }
+    GAME_NAMES = { ...names, blizzard: { ...names.blizzard,
+      product: { ...DEFAULT_GAME_NAMES.blizzard.product, ...names.blizzard?.product } } };
+    STEAM_APPS = appIds;
+    if (lastApps) renderApps(lastApps);
+  } catch (_) { /* Keep the last good names when refresh fails. */ }
+  setTimeout(refreshGameNames, 5000);
+}
+
 // --- formatting ----------------------------------------------------------
 
 const BYTE_UNITS = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"];
@@ -364,30 +463,36 @@ function fmtAgo(ms, now) {
 
 function renderApps(data) {
   if (data.service !== service) return; // a reply for an earlier selection
+  lastApps = data;
+  data = { ...data, apps: groupedApps(data) };
   const body = $("apps");
   body.textContent = "";
   $("apps-empty").hidden = data.apps.length > 0;
   // One kind gets the column header; a mix is labelled row by row.
   const kinds = new Set(data.apps.map((a) => a.kind).filter((k) => k !== "other"));
   const kind = kinds.size === 1 ? [...kinds][0] : null;
-  $("apps-kind").textContent = KIND_LABELS[kind] || "Download";
+  $("apps-kind").textContent = kind === "depot" ? "Game" : kind === "product" ? "Game" : KIND_LABELS[kind] || "Download";
   const now = last ? last.end : Date.now();
   // Removing a game needs the password; "other" rows are not one game.
-  const purgeable = (a) => settings && settings.editable && a.kind !== "other" && data.service !== "other";
+  const purgeable = (a) => settings && settings.editable && a.kind !== "other" && data.service !== "other" && (!a.groupedDepots || a.groupedDepots.length === 1);
   $("apps-actions").hidden = !data.apps.some(purgeable);
   for (const a of data.apps) {
     const tr = document.createElement("tr");
     const td = cell(tr, "");
     if (a.kind === "depot") {
-      // SteamDB names the game a depot belongs to.
+      // Known owners link to the app; unresolved IDs keep their depot link.
       const link = document.createElement("a");
-      link.href = `https://steamdb.info/depot/${encodeURIComponent(a.id)}/`;
+      link.href = depotURL(a.id);
       link.target = "_blank"; link.rel = "noopener noreferrer";
-      link.title = "Look up this depot on SteamDB";
-      link.textContent = a.id;
+      link.title = a.groupedDepots && a.groupedDepots.length > 1
+        ? `Show game on SteamDB (${a.groupedDepots.length} depots: ${a.groupedDepots.map(d => d.id).join(", ")})`
+        : `Show game on SteamDB (depot ${a.id})`;
+      link.textContent = gameName(data.service, a);
       td.appendChild(link);
+      renderDepotDetails(td, a);
     } else {
-      td.textContent = a.kind === "other" ? "Others (limit reached)" : a.id;
+      td.textContent = a.kind === "other" ? "Others (limit reached)" : gameName(data.service, a);
+      if (a.kind !== "other") td.title = `${KIND_LABELS[a.kind] || a.kind}: ${a.id}`;
     }
     if (!kind && a.kind !== "other") {
       const badge = document.createElement("span");
@@ -411,6 +516,8 @@ function renderApps(data) {
 }
 
 function appLabel(a) {
+  const name = gameName(service, a);
+  if (name !== a.id) return `${name} (${(KIND_LABELS[a.kind] || a.kind).toLowerCase()} ${a.id})`;
   return a.kind === "host" ? a.id : `${(KIND_LABELS[a.kind] || a.kind).toLowerCase()} ${a.id}`;
 }
 
@@ -716,3 +823,5 @@ fetch("api/settings", { cache: "no-store" })
 
 selectService(service, false);
 poll();
+
+refreshGameNames();

@@ -25,6 +25,7 @@ defaults as lancachenet/monolithic, plus a few additions (marked "added").
 | `METRICS_ADDR`         | `:8080`                                       | Metrics, health and dashboard listener; `off` disables (added)                                                          |
 | `SETTINGS_FILE`        | `/data/settings.json`                         | Where settings changed from the dashboard are saved (added)                                                             |
 | `STATS_FILE`           | `/data/stats.json`                            | Where the dashboard's traffic totals are kept across restarts; `off` keeps them in memory only (added)                  |
+| `GAME_NAMES_FILE`      | `/data/game-names.json`                       | Optional dashboard name/Steam owner lookup JSON; reloaded without restart; `off` disables file loading (added) |
 | `DASHBOARD_PASSWORD`   | (empty)                                       | Password for settings changes, `verify` and `purge`; empty makes them read-only (added)                                 |
 
 ## Live settings

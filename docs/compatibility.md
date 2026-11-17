@@ -23,6 +23,11 @@ deliberately behaves differently, and what it does not do yet.
 - When ambiguous, behavior is chosen for cache correctness (never serve wrong
   bytes).
 
+- The dashboard can display friendly game names and group Steam depots by a
+  supplied owner app ID. This changes presentation only; existing traffic files,
+  cache tags and individual purge requests keep their original IDs. See
+  [Game names](monitoring.md#game-names).
+
 ## Known limitations
 
 - Responses that are not cacheable chunks (404, 5xx, `Content-Encoding`,

@@ -34,6 +34,7 @@ type Config struct {
 	MetricsAddr string // METRICS_ADDR (/metrics, /healthz and the dashboard); "" disables it
 
 	SettingsFile      string // SETTINGS_FILE: values saved from the dashboard
+	GameNamesFile     string // GAME_NAMES_FILE: optional dashboard lookup JSON; "" disables it
 	StatsFile         string // STATS_FILE: dashboard traffic totals kept across restarts; "" disables it
 	DashboardPassword string // DASHBOARD_PASSWORD; "" makes the dashboard read-only
 }
@@ -60,6 +61,7 @@ var Defaults = map[string]string{
 	"METRICS_ADDR":         ":8080",
 	"SETTINGS_FILE":        "/data/settings.json",
 	"STATS_FILE":           "/data/stats.json",
+	"GAME_NAMES_FILE":      "/data/game-names.json",
 	"DASHBOARD_PASSWORD":   "",
 }
 
@@ -110,6 +112,7 @@ func Load(getenv func(string) string) (*Config, error) {
 	c.SNIAddr = listenAddr(get("SNI_ADDR"))
 	c.MetricsAddr = listenAddr(get("METRICS_ADDR"))
 	c.SettingsFile = get("SETTINGS_FILE")
+	c.GameNamesFile = listenAddr(get("GAME_NAMES_FILE"))
 	c.StatsFile = listenAddr(get("STATS_FILE")) // "off" disables it
 	c.DashboardPassword = get("DASHBOARD_PASSWORD")
 	return &c, nil

@@ -29,3 +29,10 @@ jobs:
       # -count=1: setup-go restores Go's build cache, test results included,
       # and a cached pass would hide a flaky test.
       - run: go test -count=1 ./...
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Dashboard JavaScript checks
+        run: node internal/dashboard/app_test.cjs internal/dashboard/static/app.js
+      - name: Optional game-name helper checks
+        run: PYTHONDONTWRITEBYTECODE=1 python3 -W error::ResourceWarning -m unittest discover -s contrib/game-names -v

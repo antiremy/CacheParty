@@ -12,6 +12,13 @@ go test ./... -race
 go test -run xxx -bench . ./internal/domains ./internal/accesslog ./internal/chunk ./internal/proxy ./internal/store
 ```
 
+Optional name-helper and dashboard JavaScript checks:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python3 -W error::ResourceWarning -m unittest discover -s contrib/game-names -v
+node internal/dashboard/app_test.cjs internal/dashboard/static/app.js
+```
+
 For end-to-end comparisons against monolithic, see [Benchmarks](benchmarks.md).
 
 ## Layout

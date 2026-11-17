@@ -43,7 +43,8 @@ passthrough), reading nginx's on-disk cache format.
   walk millions of files.
 - **Built-in dashboard.** Live throughput, cache hit share, and per-service,
   per-game, per-client and per-CDN-host traffic, at `http://<host>:8080/`,
-  plus Prometheus `/metrics`. See [Dashboard, metrics and logs](docs/monitoring.md).
+  plus Prometheus `/metrics`. Optional [game-name lookups](docs/monitoring.md#game-names)
+  group Steam depots under readable titles with SteamDB app links. See [Dashboard, metrics and logs](docs/monitoring.md).
 - **Live settings.** Cache size, free-space floor, max age, read-ahead,
   upstream rate limit and bypass domains can be changed from the dashboard
   without a restart.

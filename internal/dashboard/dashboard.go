@@ -62,6 +62,8 @@ type Config struct {
 	// per-host totals are kept between restarts; "" keeps them in memory
 	// only.
 	StatsFile string
+	// GameNamesFile is an optional, atomically replaceable display-name lookup.
+	GameNamesFile string
 
 	Settings *config.Config       // as loaded at startup
 	Override *config.Overrides    // where changes are saved
@@ -83,6 +85,8 @@ type Dashboard struct {
 	started time.Time
 	hist    *history
 	current atomic.Pointer[config.Config]
+	namesMu sync.Mutex // protects the last valid display-name snapshot
+	names   gameNames
 	failMu  sync.Mutex // serializes failed logins, to slow guessing
 	mux     *http.ServeMux
 }
@@ -105,6 +109,7 @@ func New(cfg Config) *Dashboard {
 	}
 	files, _ := fs.Sub(static, "static")
 	d.mux.Handle("GET /", http.FileServerFS(files))
+	d.mux.HandleFunc("GET /api/game-names", d.serveGameNames)
 	d.mux.HandleFunc("GET /api/stats", d.serveStats)
 	d.mux.HandleFunc("GET /api/services/{name}", d.serveApps)
 	d.mux.HandleFunc("GET /api/settings", d.serveSettings)
@@ -434,6 +439,7 @@ var settingInfo = []struct{ Key, Label, Help string }{
 	{"SNI_ADDR", "HTTPS passthrough listener", ""},
 	{"METRICS_ADDR", "Metrics and dashboard listener", ""},
 	{"SETTINGS_FILE", "Settings file", ""},
+	{"GAME_NAMES_FILE", "Game names file", "Optional display-name lookup JSON; off disables file loading."},
 	{"STATS_FILE", "Traffic totals file", "Where the dashboard's totals are kept across restarts; off keeps them in memory only."},
 }
 

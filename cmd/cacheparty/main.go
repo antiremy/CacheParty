@@ -238,15 +238,16 @@ func run() error {
 	if cfg.MetricsAddr != "" {
 		mux := http.NewServeMux()
 		dash = dashboard.New(dashboard.Config{
-			Hostname:  hostname,
-			Version:   buildVersion(),
-			Traffic:   traffic,
-			StatsFile: cfg.StatsFile,
-			Stats:     m.dashboardStats,
-			Cache:     chunks.Usage,
-			Active:    handler.Active,
-			Settings:  cfg,
-			Override:  overrides,
+			Hostname:      hostname,
+			Version:       buildVersion(),
+			Traffic:       traffic,
+			StatsFile:     cfg.StatsFile,
+			GameNamesFile: cfg.GameNamesFile,
+			Stats:         m.dashboardStats,
+			Cache:         chunks.Usage,
+			Active:        handler.Active,
+			Settings:      cfg,
+			Override:      overrides,
 			Apply: func(c *config.Config) {
 				evictor.SetLimits(evict.Limits{MaxBytes: c.CacheDiskSize, MinFree: c.MinFreeDisk, MaxAge: c.CacheMaxAge})
 				handler.SetMaxPrefetches(proxyPrefetches(c.MaxPrefetches))
