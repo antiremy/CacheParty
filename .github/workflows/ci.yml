@@ -28,9 +28,9 @@ jobs:
       - run: go vet ./...
       - name: go mod tidy
         run: go mod tidy -diff
-      - uses: golangci/golangci-lint-action@v9
-        with:
-          version: v2.15.0
+      # Repo settings allow only GitHub-owned actions, so the linter runs via go run.
+      - name: golangci-lint
+        run: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0 run
       # -count=1: setup-go restores Go's build cache, test results included,
       # and a cached pass would hide a flaky test.
       - run: go test -race -count=1 ./...
