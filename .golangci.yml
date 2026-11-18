@@ -8,7 +8,6 @@ linters:
     - errorlint
     - misspell
     - nilerr
-    - unconvert
   settings:
     errcheck:
       exclude-functions:
@@ -33,7 +32,6 @@ linters:
           - errcheck
           - bodyclose
           - errorlint
-          - unconvert
       - linters:
           - staticcheck
         text: "QF1001:"
