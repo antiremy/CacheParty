@@ -508,11 +508,15 @@ func (h *Handler) fetchChunk(ctx context.Context, o *object, idx int64, fl *flig
 		fl.begin(f, meta, ce-cs+1)
 		body = feed{resp.Body, fl}
 	}
-	if err := st.Commit(store.ChunkKey(o.key, slice, idx), ce-cs+1, body); err != nil {
+	ck := store.ChunkKey(o.key, slice, idx)
+	if err := st.Commit(ck, ce-cs+1, body); err != nil {
 		if !had {
 			st.DeleteObject(o.key) // a failed fill leaves nothing behind
 		}
 		return f, err
+	}
+	if h.dropIfStale(o.key, ck, meta) {
+		return f, errChanged
 	}
 	f.out = outChunk
 	return f, nil
@@ -551,16 +555,31 @@ func sameObject(a, b *store.ObjectMeta) bool {
 }
 
 // invalidate forgets everything cached for an object whose upstream copy
-// changed, so chunks of two versions are never mixed.
+// changed, so chunks of two versions are never mixed. The record goes
+// first: a fill that commits a chunk meanwhile then finds it gone in
+// dropIfStale, or commits before the chunks below are deleted.
 func (h *Handler) invalidate(key store.Key, old *store.ObjectMeta) {
 	st := h.cfg.Store
 	h.cfg.Log.Info("upstream object changed; dropping cached chunks", "chunks", chunk.Count(old.Size, h.cfg.SliceSize))
+	st.DeleteObject(key)
 	for i := int64(0); i < chunk.Count(old.Size, h.cfg.SliceSize); i++ {
 		if err := st.Delete(store.ChunkKey(key, h.cfg.SliceSize, i)); err != nil {
 			h.cfg.Log.Warn("delete stale chunk", "err", err)
 		}
 	}
-	st.DeleteObject(key)
+}
+
+// dropIfStale deletes a just-committed chunk when its object was dropped or
+// replaced by another version during the fill, so it is never served with
+// the other version's chunks. It reports whether it did.
+func (h *Handler) dropIfStale(key, ck store.Key, meta *store.ObjectMeta) bool {
+	if cur, ok := h.cfg.Store.Object(key); ok && sameObject(cur, meta) {
+		return false
+	}
+	if err := h.cfg.Store.Delete(ck); err != nil {
+		h.cfg.Log.Warn("delete stale chunk", "err", err)
+	}
+	return true
 }
 
 // finishOther completes a request whose first fetch was not a plain chunk.
@@ -642,7 +661,21 @@ func (h *Handler) serveFull(w http.ResponseWriter, rec *record, o *object, spec 
 	for i := int64(0); i <= last; i++ {
 		n := chunk.End(i, slice, size) - chunk.Start(i, slice) + 1
 		body := io.TeeReader(io.LimitReader(resp.Body, n), cw)
-		if err := st.Commit(store.ChunkKey(o.key, slice, i), n, body); err != nil {
+		ck := store.ChunkKey(o.key, slice, i)
+		err := st.Commit(ck, n, body)
+		if err == nil && h.dropIfStale(o.key, ck, meta) {
+			// Another request changed the object. This response is still
+			// one consistent copy, so finish relaying it without caching.
+			rest := chunk.End(last, slice, size) - chunk.End(i, slice, size)
+			_, err = io.Copy(cw, io.LimitReader(resp.Body, rest))
+			if err == nil && cw.sent < rng.Len() {
+				err = io.ErrUnexpectedEOF
+			}
+			if err == nil {
+				break
+			}
+		}
+		if err != nil {
 			rec.bytes = cw.sent
 			if cw.sent < rng.Len() && o.r.Context().Err() == nil {
 				h.abort(o, "streaming full upstream response", err)
