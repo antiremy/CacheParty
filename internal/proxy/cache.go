@@ -307,7 +307,7 @@ func (h *Handler) recordApp(o *object, meta *store.ObjectMeta) {
 	if app := h.app(o); app != "" {
 		m := *meta // stored metadata is immutable
 		m.App = app
-		h.cfg.Store.PutObject(o.key, &m)
+		_ = h.cfg.Store.PutObject(o.key, &m)
 	}
 }
 
@@ -524,7 +524,7 @@ func (h *Handler) fetchChunk(ctx context.Context, o *object, idx int64, fl *flig
 	}
 	if err := st.Commit(store.ChunkKey(o.key, slice, idx), ce-cs+1, body); err != nil {
 		if !had {
-			st.DeleteObject(o.key) // a failed fill leaves nothing behind
+			_ = st.DeleteObject(o.key) // a failed fill leaves nothing behind
 		}
 		return f, err
 	}
@@ -576,7 +576,7 @@ func (h *Handler) invalidate(key store.Key, old *store.ObjectMeta) {
 			h.cfg.Log.Warn("delete stale chunk", "err", err)
 		}
 	}
-	st.DeleteObject(key)
+	_ = st.DeleteObject(key)
 }
 
 // finishOther completes a request whose first fetch was not a plain chunk.

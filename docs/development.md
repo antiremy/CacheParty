@@ -8,9 +8,16 @@ root.
 ```sh
 gofmt -l .
 go vet ./...
+golangci-lint run
+go mod tidy -diff
 go test ./... -race
+go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 go test -run xxx -bench . ./internal/domains ./internal/accesslog ./internal/chunk ./internal/proxy ./internal/store
 ```
+
+CI runs all of these except the benchmarks. Lint rules live in
+[`.golangci.yml`](../.golangci.yml); install golangci-lint v2 from
+[golangci-lint.run](https://golangci-lint.run/welcome/install/).
 
 For end-to-end comparisons against monolithic, see [Benchmarks](benchmarks.md).
 

@@ -265,7 +265,7 @@ func run() error {
 		mux.Handle("/metrics", reg.Handler())
 		mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "text/plain")
-			io.WriteString(w, "ok\n")
+			_, _ = io.WriteString(w, "ok\n")
 		})
 		metricsSrv = &http.Server{Addr: cfg.MetricsAddr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 		go func() { errc <- metricsSrv.ListenAndServe() }()

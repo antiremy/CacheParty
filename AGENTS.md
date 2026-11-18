@@ -13,9 +13,10 @@ Documentation section indexes `docs/`.
 ## Checks
 
 CI (`.github/workflows/ci.yml`) is the bar: `gofmt -l .` must print nothing,
-then `go vet ./...` and `go test -count=1 ./...`. Run `go test -race` on
-`internal/proxy` too when touching concurrency; some proxy tests branch on
-`raceEnabled`.
+then `go vet ./...`, `go mod tidy -diff`, `golangci-lint run` (rules in
+`.golangci.yml`), `go test -race -count=1 ./...` and govulncheck. Some proxy
+tests branch on `raceEnabled`. Fix lint findings rather than adding
+`//nolint`; a deliberately ignored error is written `_ = f()`.
 
 ## Invariants
 
