@@ -567,15 +567,23 @@ func TestUpstreamChangedIsNeverMixed(t *testing.T) {
 		}
 	})
 
+	// CDNs disagree on Last-Modified for the same bytes (PSN's Akamai and
+	// CloudFront copies do), so only a size change drops the cached chunks.
 	t.Run("same size, different Last-Modified", func(t *testing.T) {
 		e := newCachedEnv(t)
-		e.origin.Set("/g", &testutil.Obj{Body: oldBody, LastModified: time.Unix(1_700_000_000, 0)})
+		first := time.Unix(1_700_000_000, 0)
+		e.origin.Set("/g", &testutil.Obj{Body: oldBody, LastModified: first})
 		e.get(t, "/g", nil)
-		other := newBody[:2500]
-		e.origin.Set("/g", &testutil.Obj{Body: other, LastModified: time.Unix(1_800_000_000, 0)})
-		e.st.Delete(store.ChunkKey(store.ObjectKey("testcdn", "/g"), testSlice, 0))
-		if _, got := e.get(t, "/g", nil); !bytes.Equal(got, other) {
-			t.Fatal("same-size change not detected")
+		e.origin.Set("/g", &testutil.Obj{Body: oldBody, LastModified: time.Unix(1_700_000_076, 0)})
+		e.st.Delete(store.ChunkKey(store.ObjectKey("testcdn", "/g"), testSlice, 2))
+		resp, got := e.get(t, "/g", nil)
+		if !bytes.Equal(got, oldBody) {
+			t.Fatal("body mismatch")
+		}
+		eq(t, "chunks kept", e.chunks(), int64(3))
+		eq(t, "stored Last-Modified", resp.Header.Get("Last-Modified"), first.UTC().Format(http.TimeFormat))
+		if r := e.origin.Ranges("/g"); fmt.Sprint(r) != "[bytes=0-999 bytes=1000-1999 bytes=2000-2999 bytes=2000-2999]" {
+			t.Errorf("upstream ranges = %v", r)
 		}
 	})
 }

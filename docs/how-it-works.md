@@ -40,8 +40,13 @@ loading a real list later would silently split the cache.
   internally and never cached; the original cache key is kept.
   `Expires`/`Cache-Control` are ignored, and `ETag` is stripped from every
   response.
-- If an object changes upstream (total size or `Last-Modified` differs), all its
-  chunks are dropped so old and new bytes are never mixed.
+- If an object's total size changes upstream, all its chunks are dropped so
+  old and new bytes are never mixed. `Last-Modified` and `ETag` are not
+  compared: CDNs serving the same bytes disagree on both (PSN's Akamai and
+  CloudFront copies of one package do), which would throw away a game's
+  progress every time the upstream switched. Game CDNs name content by hash
+  or version in the URL, so a same-size change in place is not expected.
+  Clients always see the `Last-Modified` stored with the first fill.
 
 ## Coalescing
 

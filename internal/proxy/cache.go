@@ -494,7 +494,9 @@ func (h *Handler) fetchChunk(ctx context.Context, o *object, idx int64, fl *flig
 		h.invalidate(o.key, old)
 		return f, errChanged
 	}
-	if !had {
+	if had {
+		meta = old // every client sees the stored Last-Modified
+	} else {
 		meta.App = h.app(o)
 		// Before the commit, so clients streaming from fl can rely on it.
 		if err := st.PutObject(o.key, meta); err != nil {
@@ -541,13 +543,11 @@ func encoded(resp *http.Response) bool {
 	return ce != "" && !strings.EqualFold(ce, "identity")
 }
 
-// sameObject reports whether two descriptions can be the same object.
-// Last-Modified is compared only when both sides have one.
+// sameObject reports whether two descriptions can be the same object. Only
+// the size counts: CDNs serving the same bytes disagree on Last-Modified and
+// ETag (PSN's Akamai and CloudFront copies of one package differ in both).
 func sameObject(a, b *store.ObjectMeta) bool {
-	if a.Size != b.Size {
-		return false
-	}
-	return a.LastModified == "" || b.LastModified == "" || a.LastModified == b.LastModified
+	return a.Size == b.Size
 }
 
 // invalidate forgets everything cached for an object whose upstream copy
@@ -611,16 +611,22 @@ func (h *Handler) serveFull(w http.ResponseWriter, rec *record, o *object, spec 
 	size := resp.ContentLength
 	meta := store.NewObjectMeta(size, resp.Header.Get("Content-Type"), resp.Header.Get("Last-Modified"))
 	meta.App = h.app(o)
-	if old, ok := st.Object(o.key); ok && !sameObject(old, meta) {
+	old, stored := st.Object(o.key)
+	if stored && sameObject(old, meta) {
+		meta = old // every client sees the stored Last-Modified
+	} else if stored {
 		h.invalidate(o.key, old)
+		stored = false
 	}
 	rng, status := spec.Resolve(size)
 	if status == chunk.StatusUnsatisfiable {
 		h.writeUnsatisfiable(w, rec, size, hdrMiss, f)
 		return nil
 	}
-	if err := st.PutObject(o.key, meta); err != nil {
-		return err
+	if !stored {
+		if err := st.PutObject(o.key, meta); err != nil {
+			return err
+		}
 	}
 	_, last := chunk.Span(rng, slice)
 
