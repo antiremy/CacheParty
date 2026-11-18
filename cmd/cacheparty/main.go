@@ -257,8 +257,9 @@ func run() error {
 			Verify: func(ctx context.Context, dryRun bool) (store.ScrubResult, error) {
 				return chunks.Scrub(ctx, store.ScrubOptions{MinAge: time.Hour, DryRun: dryRun})
 			},
-			Purge: evictor.Purge,
-			Log:   log,
+			Purge:      evictor.Purge,
+			HTTPClient: up.HTTPClient(),
+			Log:        log,
 		})
 		go dash.Run(ctx)
 		mux.Handle("/", dash)

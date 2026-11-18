@@ -33,6 +33,10 @@ type Config struct {
 	SNIAddr     string // SNI_ADDR (TLS passthrough listener); "" disables it
 	MetricsAddr string // METRICS_ADDR (/metrics, /healthz and the dashboard); "" disables it
 
+	GameNames        bool   // GAME_NAMES: show game names on the dashboard
+	GroupSteamDepots bool   // GROUP_STEAM_DEPOTS: one dashboard row per Steam game
+	GameNamesFile    string // GAME_NAMES_FILE: where downloaded Steam names are kept
+
 	SettingsFile      string // SETTINGS_FILE: values saved from the dashboard
 	StatsFile         string // STATS_FILE: dashboard traffic totals kept across restarts; "" disables it
 	DashboardPassword string // DASHBOARD_PASSWORD; "" makes the dashboard read-only
@@ -58,6 +62,9 @@ var Defaults = map[string]string{
 	"HTTP_ADDR":            ":80",
 	"SNI_ADDR":             ":443",
 	"METRICS_ADDR":         ":8080",
+	"GAME_NAMES":           "false",
+	"GROUP_STEAM_DEPOTS":   "true",
+	"GAME_NAMES_FILE":      "/data/game-names.json",
 	"SETTINGS_FILE":        "/data/settings.json",
 	"STATS_FILE":           "/data/stats.json",
 	"DASHBOARD_PASSWORD":   "",
@@ -109,6 +116,13 @@ func Load(getenv func(string) string) (*Config, error) {
 	c.HTTPAddr = get("HTTP_ADDR")
 	c.SNIAddr = listenAddr(get("SNI_ADDR"))
 	c.MetricsAddr = listenAddr(get("METRICS_ADDR"))
+	if c.GameNames, err = parseSwitch(get("GAME_NAMES")); err != nil {
+		return nil, fmt.Errorf("GAME_NAMES: %w", err)
+	}
+	if c.GroupSteamDepots, err = parseSwitch(get("GROUP_STEAM_DEPOTS")); err != nil {
+		return nil, fmt.Errorf("GROUP_STEAM_DEPOTS: %w", err)
+	}
+	c.GameNamesFile = get("GAME_NAMES_FILE")
 	c.SettingsFile = get("SETTINGS_FILE")
 	c.StatsFile = listenAddr(get("STATS_FILE")) // "off" disables it
 	c.DashboardPassword = get("DASHBOARD_PASSWORD")
@@ -129,6 +143,18 @@ func parseBool(s string) bool {
 		return true
 	}
 	return false
+}
+
+// parseSwitch is parseBool for new variables, which reject a typo rather
+// than reading it as false.
+func parseSwitch(s string) (bool, error) {
+	switch strings.ToLower(s) {
+	case "1", "true", "yes", "on":
+		return true, nil
+	case "0", "false", "no", "off":
+		return false, nil
+	}
+	return false, fmt.Errorf("must be true or false, got %q", s)
 }
 
 // listenAddr maps "off" (any case) to "", which disables the listener.

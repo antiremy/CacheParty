@@ -30,6 +30,33 @@ services are broken down by CDN host, which often separates games too
 per service. With `DASHBOARD_PASSWORD` set, each can be purged from the cache
 from there (see [Cache repair](cache-repair.md#purging-a-game)).
 
+### Game names
+
+Set `GAME_NAMES=true`, or turn it on in the dashboard's settings, to show game
+names instead of bare IDs:
+
+- **Blizzard** product codes (`wow`, `fenris`, …) are named from a list built
+  into CacheParty.
+- **Steam** depots are named from
+  [lancache-pics](https://github.com/regix1/lancache-pics), a map of each
+  depot to the game that owns it, built from Steam's own metadata. CacheParty
+  downloads it from GitHub (about 60 MB, through `UPSTREAM_DNS`), checks its
+  SHA-256, and checks for a new release once a day. It keeps a small copy
+  (about 2 MB) in `GAME_NAMES_FILE`, so a restart does not download it again.
+  The map is read a depot at a time and takes about 3 MB of memory once
+  loaded.
+
+With `GROUP_STEAM_DEPOTS` on (the default), the depots of one Steam game
+become one row. Its traffic is the sum of its depots, and it links to the game
+on SteamDB. Click **N depots** to list the depots under it; each depot can
+still be purged on its own. A game seen through only one depot keeps its depot
+row.
+
+Depots the map does not know, such as a game released since the last
+release, stay as numbers. Names are for display only: traffic totals,
+`STATS_FILE`, cache tags and purges keep using the IDs, so turning names on or
+off changes nothing else.
+
 ### Clients and upstream domains
 
 Two more lists sit under the throughput chart:

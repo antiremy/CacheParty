@@ -334,7 +334,7 @@ function renderHTTPS(list) {
 
 // --- per-service downloads -------------------------------------------------
 
-const KIND_LABELS = { depot: "Depot", product: "Product", app: "App", host: "Host" };
+const KIND_LABELS = { game: "Game", depot: "Depot", product: "Product", app: "App", host: "Host" };
 let service = null; // the service whose downloads are shown, or null
 try { service = new URLSearchParams(location.hash.slice(1)).get("service"); } catch (_) {}
 
@@ -362,38 +362,37 @@ function fmtAgo(ms, now) {
   return (s < 60 ? Math.floor(s) + "s" : fmtDuration(s)) + " ago";
 }
 
+let lastApps = null; // the newest reply, redrawn when a game is opened
+const openGames = new Set(); // Steam games whose depots are shown
+
 function renderApps(data) {
   if (data.service !== service) return; // a reply for an earlier selection
+  lastApps = data;
   const body = $("apps");
   body.textContent = "";
   $("apps-empty").hidden = data.apps.length > 0;
-  // One kind gets the column header; a mix is labelled row by row.
+  // With every row named the column is "Game". Otherwise one kind gets the
+  // column header, and a mix is labelled row by row.
+  const named = data.apps.some((a) => a.name) && data.apps.every((a) => a.name || a.kind === "other");
   const kinds = new Set(data.apps.map((a) => a.kind).filter((k) => k !== "other"));
-  const kind = kinds.size === 1 ? [...kinds][0] : null;
+  const kind = named ? "game" : kinds.size === 1 ? [...kinds][0] : null;
   $("apps-kind").textContent = KIND_LABELS[kind] || "Download";
   const now = last ? last.end : Date.now();
-  // Removing a game needs the password; "other" rows are not one game.
-  const purgeable = (a) => settings && settings.editable && a.kind !== "other" && data.service !== "other";
-  $("apps-actions").hidden = !data.apps.some(purgeable);
-  for (const a of data.apps) {
+  // Removing a game needs the password; "other" rows are not one game, and
+  // a grouped game is removed one depot at a time.
+  const purgeable = (a) => settings && settings.editable && a.kind !== "other" && a.kind !== "game" && data.service !== "other";
+  $("apps-actions").hidden = !data.apps.some((a) => purgeable(a) || (a.depots || []).some(purgeable));
+  const row = (a, sub) => {
     const tr = document.createElement("tr");
+    if (sub) tr.className = "sub";
     const td = cell(tr, "");
-    if (a.kind === "depot") {
-      // SteamDB names the game a depot belongs to.
-      const link = document.createElement("a");
-      link.href = `https://steamdb.info/depot/${encodeURIComponent(a.id)}/`;
-      link.target = "_blank"; link.rel = "noopener noreferrer";
-      link.title = "Look up this depot on SteamDB";
-      link.textContent = a.id;
-      td.appendChild(link);
-    } else {
-      td.textContent = a.kind === "other" ? "Others (limit reached)" : a.id;
-    }
+    appName(td, a, sub);
     if (!kind && a.kind !== "other") {
       const badge = document.createElement("span");
       badge.className = "badge"; badge.textContent = (KIND_LABELS[a.kind] || a.kind).toLowerCase();
       td.appendChild(badge);
     }
+    if (a.depots) depotsToggle(td, a);
     trafficCells(tr, a);
     cell(tr, fmtAgo(a.lastActive, now), "num");
     if (!$("apps-actions").hidden) {
@@ -407,11 +406,49 @@ function renderApps(data) {
       }
     }
     body.appendChild(tr);
+  };
+  for (const a of data.apps) {
+    row(a, false);
+    if (a.depots && openGames.has(a.id)) a.depots.forEach((d) => row(d, true));
   }
 }
 
+// appName fills td with a's name, or its ID where the name is not known.
+// Steam games and depots link to SteamDB. A depot listed under its game
+// shows its ID, since the game row already names it.
+function appName(td, a, sub) {
+  const text = a.kind === "other" ? "Others (limit reached)" : sub ? `Depot ${a.id}` : a.name || a.id;
+  if (a.kind !== "depot" && a.kind !== "game") {
+    td.textContent = text;
+    if (a.name) td.title = `${KIND_LABELS[a.kind] || a.kind} ${a.id}`;
+    return;
+  }
+  const link = document.createElement("a");
+  link.href = `https://steamdb.info/${a.kind === "game" ? "app" : "depot"}/${encodeURIComponent(a.id)}/`;
+  link.target = "_blank"; link.rel = "noopener noreferrer";
+  link.title = a.kind === "game" ? `Look up this game on SteamDB (app ${a.id})` : `Look up depot ${a.id} on SteamDB`;
+  link.textContent = text;
+  td.appendChild(link);
+}
+
+// depotsToggle adds a button that shows or hides a game's depots.
+function depotsToggle(td, a) {
+  const btn = document.createElement("button");
+  btn.type = "button"; btn.className = "link small depots";
+  btn.textContent = `${a.depots.length} depots`;
+  btn.setAttribute("aria-expanded", openGames.has(a.id));
+  btn.addEventListener("click", () => {
+    if (!openGames.delete(a.id)) openGames.add(a.id);
+    renderApps(lastApps);
+    document.querySelector(`#apps button.depots[data-game="${CSS.escape(a.id)}"]`)?.focus();
+  });
+  btn.dataset.game = a.id;
+  td.appendChild(btn);
+}
+
 function appLabel(a) {
-  return a.kind === "host" ? a.id : `${(KIND_LABELS[a.kind] || a.kind).toLowerCase()} ${a.id}`;
+  const label = a.kind === "host" ? a.id : `${(KIND_LABELS[a.kind] || a.kind).toLowerCase()} ${a.id}`;
+  return a.name ? `${a.name} (${label})` : label;
 }
 
 // --- purge ------------------------------------------------------------------
