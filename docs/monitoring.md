@@ -37,6 +37,8 @@ names instead of bare IDs:
 
 - **Blizzard** product codes (`wow`, `fenris`, …) are named from a list built
   into CacheParty.
+- **Epic** keeps its build names. Most are internal IDs, and Epic only
+  names them for a signed-in account.
 - **Steam** depots are named from
   [lancache-pics](https://github.com/regix1/lancache-pics), a map of each
   depot to the game that owns it, built from Steam's own metadata. CacheParty

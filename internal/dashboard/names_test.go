@@ -168,7 +168,9 @@ func TestServeAppsGameNames(t *testing.T) {
 	tr.Flow("steam", get("/depot/214492/chunk/a")).Sent.Add(50)
 	tr.Flow("steam", get("/depot/228988/chunk/a")).Sent.Add(10)
 	tr.Flow("steam", get("/depot/999/chunk/a")).Sent.Add(1)
-	tr.Flow("blizzard", get("/tpr/wow/data/a")).Sent.Add(1)
+	tr.Flow("blizzard", get("/tpr/wow/data/a")).Sent.Add(3)
+	tr.Flow("blizzard", get("/tpr/Hero-Live-a/data/a")).Sent.Add(2)
+	tr.Flow("blizzard", get("/tpr/pro/data/a")).Sent.Add(1)
 	d.sample(t0.Add(time.Second))
 
 	apps := func(service string) []appJSON {
@@ -197,7 +199,8 @@ func TestServeAppsGameNames(t *testing.T) {
 	if unknown := got[2]; unknown.Kind != "depot" || unknown.Name != "" || unknown.Game != "" {
 		t.Fatalf("unknown row = %+v", unknown)
 	}
-	if b := apps("blizzard"); len(b) != 1 || b[0].Name != "World of Warcraft" {
+	// Names follow the CDN path: "pro" is Overwatch's product code, not a path.
+	if b := apps("blizzard"); len(b) != 3 || b[0].Name != "World of Warcraft" || b[1].Name != "Heroes of the Storm" || b[2].Name != "" {
 		t.Fatalf("blizzard rows = %+v", b)
 	}
 

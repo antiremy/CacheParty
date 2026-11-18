@@ -43,42 +43,35 @@ const (
 // empty file from a broken release. Tests lower it.
 var minSteamDepots = 10000
 
-// blizzardNames maps the product codes in Blizzard CDN paths (/tpr/<code>/)
-// to games. A game can have more than one code.
+// blizzardNames maps the CDN path in Blizzard download URLs (/tpr/<path>/)
+// to games, in lower case. The path is not always the product code
+// (Overwatch is product "pro" but path "ovw"); each comes from the "Path"
+// column of https://us.version.battle.net/<product>/cdns. Every World of
+// Warcraft edition shares "wow".
 var blizzardNames = map[string]string{
-	"anbs":            "Diablo Immortal",
-	"auks":            "Call of Duty",
-	"aqua":            "Avowed",
-	"catalogs":        "Battle.net catalog",
-	"cod":             "Call of Duty",
-	"d3":              "Diablo III",
-	"fenris":          "Diablo IV",
-	"fore":            "Call of Duty: Vanguard",
-	"hero":            "Heroes of the Storm",
-	"hero-live-a":     "Heroes of the Storm",
-	"hs":              "Hearthstone",
-	"hsb":             "Hearthstone",
-	"lazr":            "Call of Duty: Modern Warfare 2 Campaign Remastered",
-	"odin":            "Call of Duty: Modern Warfare",
-	"osi":             "Diablo II: Resurrected",
-	"ovw":             "Overwatch",
-	"pro":             "Overwatch",
-	"rtro":            "Blizzard Arcade Collection",
-	"s1":              "StarCraft: Remastered",
-	"s2":              "StarCraft II",
-	"sc1live":         "StarCraft: Remastered",
-	"sc2":             "StarCraft II",
-	"scor":            "Sea of Thieves",
-	"viper":           "Call of Duty: Black Ops 4",
-	"w1r":             "Warcraft: Remastered",
-	"w2r":             "Warcraft II: Remastered",
-	"w3":              "Warcraft III: Reforged",
-	"war3":            "Warcraft III: Reforged",
-	"wlby":            "Crash Bandicoot 4: It's About Time",
-	"wow":             "World of Warcraft",
-	"wow_classic":     "World of Warcraft Classic",
-	"wow_classic_era": "World of Warcraft Classic Era",
-	"zeus":            "Call of Duty: Black Ops Cold War",
+	"anbs":        "Diablo Immortal",
+	"aqua":        "Avowed",
+	"auks":        "Call of Duty",
+	"b04":         "Call of Duty: Black Ops 4",
+	"diablo3":     "Diablo III",
+	"fenris":      "Diablo IV",
+	"fore":        "Call of Duty: Vanguard",
+	"hero-live-a": "Heroes of the Storm",
+	"hs":          "Hearthstone",
+	"lazr":        "Call of Duty: Modern Warfare 2 Campaign Remastered",
+	"odin":        "Call of Duty: Modern Warfare",
+	"osi":         "Diablo II: Resurrected",
+	"ovw":         "Overwatch",
+	"rtro":        "Blizzard Arcade Collection",
+	"sc1live":     "StarCraft: Remastered",
+	"sc2":         "StarCraft II",
+	"scor":        "Sea of Thieves",
+	"w1r-live":    "Warcraft: Remastered",
+	"w2r-live":    "Warcraft II: Remastered",
+	"wallaby":     "Crash Bandicoot 4: It's About Time",
+	"war3":        "Warcraft III: Reforged",
+	"wow":         "World of Warcraft",
+	"zeus":        "Call of Duty: Black Ops Cold War",
 }
 
 // steamNames is the Steam map as kept in memory and in GAME_NAMES_FILE.
