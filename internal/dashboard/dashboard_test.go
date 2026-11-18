@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
@@ -404,7 +405,12 @@ func TestSettingsReadOnlyWithoutPassword(t *testing.T) {
 
 func TestServesPage(t *testing.T) {
 	srv, _ := newTestDashboard(t, "")
-	for _, path := range []string{"/", "/app.js", "/app.css", "/favicon.svg"} {
+	modules, _ := fs.Glob(static, "static/js/*.js")
+	paths := []string{"/", "/app.css", "/favicon.svg"}
+	for _, m := range modules {
+		paths = append(paths, strings.TrimPrefix(m, "static"))
+	}
+	for _, path := range paths {
 		resp, err := http.Get(srv.URL + path)
 		if err != nil {
 			t.Fatal(err)
@@ -413,6 +419,13 @@ func TestServesPage(t *testing.T) {
 		if resp.StatusCode != http.StatusOK || resp.Header.Get("Content-Security-Policy") == "" {
 			t.Fatalf("%s: %d, CSP %q", path, resp.StatusCode, resp.Header.Get("Content-Security-Policy"))
 		}
+		// Browsers refuse ES modules served without a JavaScript type.
+		if strings.HasSuffix(path, ".js") && !strings.HasPrefix(resp.Header.Get("Content-Type"), "text/javascript") {
+			t.Fatalf("%s: Content-Type %q", path, resp.Header.Get("Content-Type"))
+		}
+	}
+	if len(modules) < 2 {
+		t.Fatalf("found %d modules", len(modules))
 	}
 }
 
