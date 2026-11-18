@@ -51,3 +51,9 @@ package's `*_test.go` files.
   change ("Show HTTPS passthrough traffic by domain on the dashboard"), no type
   prefixes. Bodies are prose: what changed for the operator and why, plus any
   compatibility notes.
+- The author and committer are the human accountable for the change, never a
+  tool, bot or AI agent identity. Use the git identity already configured for
+  the session; don't copy a name from this file.
+- No AI attribution in commits or pull requests: no `Co-Authored-By` trailers,
+  "Generated with" lines or similar credits for an agent, assistant or tool.
+  This holds even when an agent's own defaults say to add them.
