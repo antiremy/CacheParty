@@ -16,6 +16,10 @@ deliberately behaves differently, and what it does not do yet.
   `Content-Range` and `Accept-Ranges`; other upstream headers are not kept.
 - Responses carry an extra `X-CacheParty-Version` header; all of monolithic's
   headers are sent unchanged alongside it.
+- When an object's total size changes upstream, all its cached chunks are
+  dropped. nginx never checks for upstream changes: each 1 MiB slice is kept
+  for `CACHE_MAX_AGE` whatever upstream later says. Like nginx, CacheParty
+  ignores `Last-Modified` and `ETag` changes.
 - Truncated upstream bodies abort the client connection rather than ending the
   response cleanly, so a short download never looks complete.
 - CacheParty cannot read nginx's on-disk cache, so switching starts from an empty

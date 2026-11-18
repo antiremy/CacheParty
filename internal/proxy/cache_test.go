@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -567,17 +568,78 @@ func TestUpstreamChangedIsNeverMixed(t *testing.T) {
 		}
 	})
 
+	// CDNs disagree on Last-Modified for the same bytes (PSN's Akamai and
+	// CloudFront copies do), so only a size change drops the cached chunks.
 	t.Run("same size, different Last-Modified", func(t *testing.T) {
 		e := newCachedEnv(t)
-		e.origin.Set("/g", &testutil.Obj{Body: oldBody, LastModified: time.Unix(1_700_000_000, 0)})
+		first := time.Unix(1_700_000_000, 0)
+		e.origin.Set("/g", &testutil.Obj{Body: oldBody, LastModified: first})
 		e.get(t, "/g", nil)
-		other := newBody[:2500]
-		e.origin.Set("/g", &testutil.Obj{Body: other, LastModified: time.Unix(1_800_000_000, 0)})
-		e.st.Delete(store.ChunkKey(store.ObjectKey("testcdn", "/g"), testSlice, 0))
-		if _, got := e.get(t, "/g", nil); !bytes.Equal(got, other) {
-			t.Fatal("same-size change not detected")
+		e.origin.Set("/g", &testutil.Obj{Body: oldBody, LastModified: time.Unix(1_700_000_076, 0)})
+		e.st.Delete(store.ChunkKey(store.ObjectKey("testcdn", "/g"), testSlice, 2))
+		resp, got := e.get(t, "/g", nil)
+		if !bytes.Equal(got, oldBody) {
+			t.Fatal("body mismatch")
+		}
+		eq(t, "chunks kept", e.chunks(), int64(3))
+		eq(t, "stored Last-Modified", resp.Header.Get("Last-Modified"), first.UTC().Format(http.TimeFormat))
+		if r := e.origin.Ranges("/g"); fmt.Sprint(r) != "[bytes=0-999 bytes=1000-1999 bytes=2000-2999 bytes=2000-2999]" {
+			t.Errorf("upstream ranges = %v", r)
 		}
 	})
+}
+
+// raceStore runs hook once, just before the first chunk commit.
+type raceStore struct {
+	store.ChunkStore
+	once sync.Once
+	hook func()
+}
+
+func (s *raceStore) Commit(k store.Key, size int64, r io.Reader) error {
+	s.once.Do(s.hook)
+	return s.ChunkStore.Commit(k, size, r)
+}
+
+// A chunk whose fill was under way when another request saw the object
+// change must not survive next to the new version's chunks.
+func TestChunkCommittedDuringInvalidateIsDropped(t *testing.T) {
+	e := newCachedEnv(t)
+	key := store.ObjectKey("testcdn", "/g")
+	oldBody, newBody := testutil.Pattern(2500), bytes.Repeat([]byte{'n'}, 2600)
+	e.origin.Set("/g", &testutil.Obj{Body: oldBody})
+	e.h.cfg.Store = &raceStore{ChunkStore: e.st, hook: func() {
+		// What a racing request does on seeing the new version.
+		m, _ := e.st.Object(key)
+		e.h.invalidate(key, m)
+		e.origin.Set("/g", &testutil.Obj{Body: newBody})
+	}}
+	// The first download may be aborted; only what stays cached matters.
+	if resp, err := http.DefaultClient.Do(e.newReq(context.Background(), "/g", nil)); err == nil {
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}
+	if _, got := e.get(t, "/g", nil); !bytes.Equal(got, newBody) {
+		t.Fatalf("mixed versions served: %q...", got[:20])
+	}
+}
+
+// A full upstream response stays one consistent copy even when another
+// request changes the object mid-stream: the client gets all of it, and
+// none of it stays cached.
+func TestFullResponseFinishesAfterObjectChanged(t *testing.T) {
+	e := newCachedEnv(t)
+	key := store.ObjectKey("testcdn", "/f")
+	body := testutil.Pattern(2500)
+	e.origin.Set("/f", &testutil.Obj{Body: body, IgnoreRange: true})
+	e.h.cfg.Store = &raceStore{ChunkStore: e.st, hook: func() {
+		m, _ := e.st.Object(key)
+		e.h.invalidate(key, m)
+	}}
+	if _, got := e.get(t, "/f", nil); !bytes.Equal(got, body) {
+		t.Fatal("client did not get the whole response")
+	}
+	eq(t, "chunks stored", e.chunks(), int64(0))
 }
 
 func TestContentEncodingIsNeverCached(t *testing.T) {

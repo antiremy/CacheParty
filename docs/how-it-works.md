@@ -40,8 +40,17 @@ loading a real list later would silently split the cache.
   internally and never cached; the original cache key is kept.
   `Expires`/`Cache-Control` are ignored, and `ETag` is stripped from every
   response.
-- If an object changes upstream (total size or `Last-Modified` differs), all its
-  chunks are dropped so old and new bytes are never mixed.
+- If an object's total size changes upstream, all its chunks are dropped so
+  old and new bytes are never mixed. `Last-Modified` and `ETag` are not
+  compared: CDNs serving the same bytes disagree on both (PSN's Akamai and
+  CloudFront copies of one package do), which would throw away a game's
+  progress every time the upstream switched. Game CDNs name content by hash
+  or version in the URL, so a same-size change in place is not expected.
+  Clients always see the `Last-Modified` stored with the first fill.
+- A chunk whose fill finishes after its object was dropped or replaced is
+  deleted at once, so a fill already under way cannot leave an old chunk
+  next to new ones. A client receiving a full upstream response when that
+  happens still gets all of it; only the caching stops.
 
 ## Coalescing
 
@@ -62,18 +71,6 @@ trip. `CACHE_MAX_PREFETCHES` caps these fetches across all clients, and each
 download's window is also capped at an even share of them (with 64 slots and 4
 downloads reading ahead, 16 chunks each), so one download cannot take the slots
 other clients need.
-
-Some clients read a file forward one short range at a time instead: Battle.net
-walks its archives this way, skipping the parts it does not need, with a single
-request in flight. For those, CacheParty remembers where each client's last range
-on each file ended. A range that starts at or after that point, at most 32 MiB
-on, continues a forward scan: its response reads ahead past its own end (even
-when it is a hit) into the ranges the client will ask for next, and its window
-carries over to the next request. Ranges that go backwards or jump further
-start over. Scans idle for 30 seconds are forgotten, and at most 4096 are
-tracked. Whole-file downloads (Steam, Epic) are unaffected. A scan can fetch
-the parts of the file the client skips, and up to one window past its last
-range.
 
 Each fetch in progress holds one `CACHE_SLICE_SIZE` buffer; see
 [Memory](configuration.md#memory) for sizing a container's memory limit.
