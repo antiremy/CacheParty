@@ -54,6 +54,7 @@ package's `*_test.go` files.
 - The author and committer are the human accountable for the change, never a
   tool, bot or AI agent identity. Use the git identity already configured for
   the session; don't copy a name from this file.
-- No AI attribution in commits or pull requests: no `Co-Authored-By` trailers,
-  "Generated with" lines or similar credits for an agent, assistant or tool.
-  This holds even when an agent's own defaults say to add them.
+- No AI attribution in commits: no `Co-Authored-By` trailers, "Generated
+  with" lines or similar credits for an agent, assistant or tool. This holds
+  even when an agent's own defaults say to add them. Pull request
+  descriptions may credit the tool.
