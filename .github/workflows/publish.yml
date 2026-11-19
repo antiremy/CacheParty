@@ -88,7 +88,7 @@ jobs:
       # semver tags take the version explicitly so a hand-run release gets
       # them too, not just a tag push.
       - id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: |
             ghcr.io/${{ github.repository_owner }}/cacheparty
