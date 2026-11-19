@@ -324,7 +324,7 @@ var errStop = errors.New("sni: hello read")
 // client.
 func readServerName(c net.Conn, timeout time.Duration) (name string, hello []byte, err error) {
 	_ = c.SetReadDeadline(time.Now().Add(timeout))
-	defer c.SetReadDeadline(time.Time{})
+	defer func() { _ = c.SetReadDeadline(time.Time{}) }()
 
 	rc := &recorder{Conn: c}
 	srv := tls.Server(rc, &tls.Config{

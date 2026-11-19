@@ -291,7 +291,7 @@ func (h *Handler) recordApp(o *object, meta *store.ObjectMeta) {
 	if app := h.app(o); app != "" {
 		m := *meta // stored metadata is immutable
 		m.App = app
-		h.cfg.Store.PutObject(o.key, &m)
+		_ = h.cfg.Store.PutObject(o.key, &m)
 	}
 }
 
@@ -511,7 +511,7 @@ func (h *Handler) fetchChunk(ctx context.Context, o *object, idx int64, fl *flig
 	ck := store.ChunkKey(o.key, slice, idx)
 	if err := st.Commit(ck, ce-cs+1, body); err != nil {
 		if !had {
-			st.DeleteObject(o.key) // a failed fill leaves nothing behind
+			_ = st.DeleteObject(o.key) // a failed fill leaves nothing behind
 		}
 		return f, err
 	}
@@ -561,7 +561,7 @@ func sameObject(a, b *store.ObjectMeta) bool {
 func (h *Handler) invalidate(key store.Key, old *store.ObjectMeta) {
 	st := h.cfg.Store
 	h.cfg.Log.Info("upstream object changed; dropping cached chunks", "chunks", chunk.Count(old.Size, h.cfg.SliceSize))
-	st.DeleteObject(key)
+	_ = st.DeleteObject(key)
 	for i := int64(0); i < chunk.Count(old.Size, h.cfg.SliceSize); i++ {
 		if err := st.Delete(store.ChunkKey(key, h.cfg.SliceSize, i)); err != nil {
 			h.cfg.Log.Warn("delete stale chunk", "err", err)

@@ -104,7 +104,7 @@ func waitReady(c loadCfg, d time.Duration) error {
 			}
 		}
 		if time.Now().After(deadline) {
-			return fmt.Errorf("%s not ready after %s (last error: %v)", c.target, d, err)
+			return fmt.Errorf("%s not ready after %s (last error: %w)", c.target, d, err)
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
