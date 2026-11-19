@@ -76,9 +76,9 @@ package's `*_test.go` files.
   first so the design is agreed before the code is written.
 - Before opening, run every command in Checks across `./...` and list them in
   the description. A subset of packages or commands is not a pass.
-- The description is for the reviewer: what changes for the operator, why,
-  and how it was tested. Dashboard changes include before and after
-  screenshots. Keep agent self-reviews, scores and review transcripts out; a
+- Fill in every section of `.github/pull_request_template.md`; with
+  `gh pr create`, pass it as the body. The description is for the reviewer.
+  Keep agent self-reviews, scores and review transcripts out; a
   one-line credit to the tool at the end is fine.
 - The human opening the pull request has read every line and answers review
   questions in their own words.
