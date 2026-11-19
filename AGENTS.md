@@ -20,6 +20,18 @@ tests branch on `raceEnabled`. Fix lint findings rather than adding
 
 ## Invariants
 
+- **One Go binary, one distroless image.** Every feature ships as Go code
+  inside the binary and runs on every platform the release builds. Operators
+  run nothing beside it: no helper scripts, sidecars, second containers or
+  host tools like `tail` or `cron`. CI checks Go only, so new code comes with
+  Go tests.
+- **The server owns the numbers.** Totals, grouping and anything persisted are
+  computed in Go and served by `/api/*`. The dashboard formats and sorts what
+  the API returns, so every open tab shows the same figures.
+- **Outside sources fail safe.** Data fetched from the internet (domain lists,
+  name maps, metadata) keeps its last good copy when a fetch errors, times out
+  or returns a 404. The failure is logged and retried later; only a good
+  response replaces known-good data.
 - **Compatibility surface is frozen.** Environment variable names, the
   `X-LanCache-Processed-By` and `X-Upstream-*` response headers, the
   `/lancache-heartbeat` endpoint and the `access.log` formats match monolithic
@@ -56,5 +68,17 @@ package's `*_test.go` files.
   the session; don't copy a name from this file.
 - No AI attribution in commits: no `Co-Authored-By` trailers, "Generated
   with" lines or similar credits for an agent, assistant or tool. This holds
-  even when an agent's own defaults say to add them. Pull request
-  descriptions may credit the tool.
+  even when an agent's own defaults say to add them.
+
+## Pull requests
+
+- One user-visible change per pull request. For a new feature, open an issue
+  first so the design is agreed before the code is written.
+- Before opening, run every command in Checks across `./...` and list them in
+  the description. A subset of packages or commands is not a pass.
+- The description is for the reviewer: what changes for the operator, why,
+  and how it was tested. Dashboard changes include before and after
+  screenshots. Keep agent self-reviews, scores and review transcripts out; a
+  one-line credit to the tool at the end is fine.
+- The human opening the pull request has read every line and answers review
+  questions in their own words.
