@@ -101,7 +101,7 @@ jobs:
             type=semver,pattern={{major}},value=${{ needs.version.outputs.version }},enable=${{ needs.version.outputs.release }}
 
       # The dashboard shows VERSION: the tag for releases, else the commit.
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64,linux/arm64
