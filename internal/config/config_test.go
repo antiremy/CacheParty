@@ -186,11 +186,11 @@ func TestLoadBypassDomains(t *testing.T) {
 func TestLoadGameNames(t *testing.T) {
 	get := func(m map[string]string) func(string) string { return func(k string) string { return m[k] } }
 	c, err := Load(get(nil))
-	if err != nil || c.GameNames || !c.GroupSteamDepots || c.GamePictures || c.GameNamesFile != "/data/game-names.json" {
+	if err != nil || !c.GameNames || !c.GroupSteamDepots || c.GamePictures || c.GameNamesFile != "/data/game-names.json" {
 		t.Fatalf("defaults: %+v, %v", c, err)
 	}
-	c, err = Load(get(map[string]string{"GAME_NAMES": "On", "GROUP_STEAM_DEPOTS": "0", "GAME_PICTURES": "yes"}))
-	if err != nil || !c.GameNames || c.GroupSteamDepots || !c.GamePictures {
+	c, err = Load(get(map[string]string{"GAME_NAMES": "off", "GROUP_STEAM_DEPOTS": "0", "GAME_PICTURES": "yes"}))
+	if err != nil || c.GameNames || c.GroupSteamDepots || !c.GamePictures {
 		t.Fatalf("set: %+v, %v", c, err)
 	}
 	if _, err := Load(get(map[string]string{"GAME_NAMES": "ture"})); err == nil {

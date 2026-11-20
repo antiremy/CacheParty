@@ -63,7 +63,7 @@ var Defaults = map[string]string{
 	"HTTP_ADDR":            ":80",
 	"SNI_ADDR":             ":443",
 	"METRICS_ADDR":         ":8080",
-	"GAME_NAMES":           "false",
+	"GAME_NAMES":           "true",
 	"GROUP_STEAM_DEPOTS":   "true",
 	"GAME_PICTURES":        "false",
 	"GAME_NAMES_FILE":      "/data/game-names.json",

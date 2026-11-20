@@ -32,8 +32,10 @@ from there (see [Cache repair](cache-repair.md#purging-a-game)).
 
 ### Game names
 
-Set `GAME_NAMES=true`, or turn it on in the dashboard's settings, to show game
-names instead of bare IDs:
+Game names are on by default. Set `GAME_NAMES=false`, or turn it off in the
+dashboard's settings, to show bare IDs instead. With it on, CacheParty
+downloads the Steam name map (see below) on first start, so a network without
+internet access keeps Steam IDs bare:
 
 - **Blizzard** product codes (`wow`, `fenris`, …) are named from a list built
   into CacheParty.

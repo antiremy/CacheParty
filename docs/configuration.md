@@ -23,7 +23,7 @@ defaults as lancachenet/monolithic, plus a few additions (marked "added").
 | `HTTP_ADDR`            | `:80`                                         | Caching proxy listener (added)                                                                                          |
 | `SNI_ADDR`             | `:443`                                        | SNI passthrough listener; `off` disables (added)                                                                        |
 | `METRICS_ADDR`         | `:8080`                                       | Metrics, health and dashboard listener; `off` disables (added)                                                          |
-| `GAME_NAMES`           | `false`                                       | Show game names on the dashboard; turns on the Steam name download, see [Game names](monitoring.md#game-names) (added) |
+| `GAME_NAMES`           | `true`                                        | Show game names on the dashboard; turns on the Steam name download, see [Game names](monitoring.md#game-names) (added) |
 | `GROUP_STEAM_DEPOTS`   | `true`                                        | With game names on, show a Steam game's depots as one row (added)                                                       |
 | `GAME_PICTURES`        | `false`                                       | With game names on, show Steam game pictures, loaded by the browser from Steam, see [Game pictures](monitoring.md#game-pictures) (added) |
 | `GAME_NAMES_FILE`      | `/data/game-names.json`                       | Where the downloaded Steam names are kept across restarts (added)                                                       |
