@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"testing"
 
+	"cacheparty/internal/config"
 	"cacheparty/internal/evict"
 	"cacheparty/internal/store"
 )
@@ -104,6 +106,40 @@ func TestPurgeApp(t *testing.T) {
 		t.Fatalf("purge: %d %s", code, body)
 	}
 	if want := []call{{"steam/depot/990081", true}, {"steam/depot/990081", false}}; !slices.Equal(calls, want) {
+		t.Fatalf("calls = %v, want %v", calls, want)
+	}
+}
+
+func TestPurgeGame(t *testing.T) {
+	var calls []string
+	tr := NewTraffic()
+	d := New(Config{
+		Traffic: tr, Stats: func() Stats { return Stats{} }, Settings: &config.Config{}, Log: quietLog(),
+		Password: "hunter2",
+		Purge: func(app string, dryRun bool) evict.PurgeResult {
+			calls = append(calls, app)
+			return evict.PurgeResult{Objects: 1, Chunks: 2, Bytes: 3}
+		},
+	})
+	s, err := parseSteamMap(strings.NewReader(testSteamMap))
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.names.set(s)
+	for _, p := range []string{"/depot/214492/chunk/a", "/depot/214491/chunk/a", "/depot/228988/chunk/a", "/depot/999/chunk/a"} {
+		tr.Flow("steam", get(p)).Sent.Add(1)
+	}
+
+	r := httptest.NewRequest("POST", "/api/cache/purge", strings.NewReader(`{"service":"steam","kind":"game","id":"214490"}`))
+	r.Header.Set("Authorization", "Bearer hunter2")
+	rec := httptest.NewRecorder()
+	d.ServeHTTP(rec, r)
+	var got purgeJSON
+	json.Unmarshal(rec.Body.Bytes(), &got)
+	if want := (purgeJSON{"steam/game/214490", false, 2, 4, 6}); rec.Code != http.StatusOK || got != want {
+		t.Fatalf("%d %+v, want %+v", rec.Code, got, want)
+	}
+	if want := []string{"steam/depot/214491", "steam/depot/214492"}; !slices.Equal(calls, want) {
 		t.Fatalf("calls = %v, want %v", calls, want)
 	}
 }

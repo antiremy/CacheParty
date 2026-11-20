@@ -379,9 +379,9 @@ function renderApps(data) {
   const kind = named ? "game" : kinds.size === 1 ? [...kinds][0] : null;
   $("apps-kind").textContent = KIND_LABELS[kind] || "Download";
   const now = last ? last.end : Date.now();
-  // Removing a game needs the password; "other" rows are not one game, and
-  // a grouped game is removed one depot at a time.
-  const purgeable = (a) => settings && settings.editable && a.kind !== "other" && a.kind !== "game" && data.service !== "other";
+  // Removing a game needs the password; "other" rows are not one game. A
+  // grouped game removes all of its depots at once.
+  const purgeable = (a) => settings && settings.editable && a.kind !== "other" && data.service !== "other";
   $("apps-actions").hidden = !data.apps.some((a) => purgeable(a) || (a.depots || []).some(purgeable));
   const row = (a, sub) => {
     const tr = document.createElement("tr");
@@ -402,7 +402,7 @@ function renderApps(data) {
       if (purgeable(a)) {
         const btn = document.createElement("button");
         btn.type = "button"; btn.className = "link"; btn.textContent = "Purge";
-        btn.title = `Remove everything cached for ${appLabel(a)}`;
+        btn.title = a.depots ? `Remove everything cached for ${appLabel(a)}, all ${a.depots.length} depots` : `Remove everything cached for ${appLabel(a)}`;
         btn.addEventListener("click", () => openPurge(a));
         td.appendChild(btn);
       }

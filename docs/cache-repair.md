@@ -47,7 +47,8 @@ is no). On the dashboard, with `DASHBOARD_PASSWORD` set, each game in a
 service's breakdown has a **Purge** link that shows the same count and asks
 for confirmation. The API is `POST /api/cache/purge` with
 `{"service", "kind", "id", "confirm"}`; without `"confirm": true` it only
-reports what would be removed.
+reports what would be removed. A grouped Steam game (`"kind": "game"`, the
+app ID as `"id"`) purges every depot the dashboard lists under it.
 
 ### How chunks are found
 
@@ -59,9 +60,10 @@ Purging walks the objects in memory and needs no directory walk.
 
 ### Limits
 
-- Steam is broken down by **depot**, not by app: a game with several depots
-  (language packs, DLC) is purged one depot at a time. SteamDB lists a
-  game's depots.
+- Steam is cached by **depot**, not by app. With `GROUP_STEAM_DEPOTS` on,
+  the dashboard's **Purge** link on a game row removes all the depots listed
+  under it in one go. Depots the dashboard has not seen, and the command
+  line, still go one depot at a time; SteamDB lists a game's depots.
 - Objects cached before this was recorded carry no game until they are
   requested again, so a game nobody has downloaded since upgrading is not
   found. `cacheparty verify` does not change this.

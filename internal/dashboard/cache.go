@@ -5,8 +5,10 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
 
+	"cacheparty/internal/evict"
 	"cacheparty/internal/store"
 )
 
@@ -94,10 +96,35 @@ func (d *Dashboard) purgeApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tag := a.tag(body.Service)
-	res := d.cfg.Purge(tag, !body.Confirm)
+	var res evict.PurgeResult
+	for _, t := range d.purgeTags(body.Service, a) {
+		r := d.cfg.Purge(t, !body.Confirm)
+		res.Objects += r.Objects
+		res.Chunks += r.Chunks
+		res.Bytes += r.Bytes
+	}
 	if body.Confirm {
 		d.cfg.Log.Info("cache purged from dashboard", "remote", r.RemoteAddr, "app", tag,
 			"objects", res.Objects, "chunks", res.Chunks, "freed_bytes", res.Bytes)
 	}
 	writeJSON(w, http.StatusOK, purgeJSON{tag, body.Confirm, res.Objects, res.Chunks, res.Bytes})
+}
+
+// purgeTags lists the cache tags that purging a covers. A Steam "game" row
+// covers the depots the dashboard groups under it.
+func (d *Dashboard) purgeTags(service string, a app) []string {
+	if a.Kind != "game" {
+		return []string{a.tag(service)}
+	}
+	var tags []string
+	for k := range d.cfg.Traffic.snapshot() {
+		if k.Service != service || k.Group != "" || k.App.Kind != "depot" {
+			continue
+		}
+		if _, game := d.names.lookup(service, k.App); game == a.ID {
+			tags = append(tags, k.App.tag(service))
+		}
+	}
+	sort.Strings(tags)
+	return tags
 }

@@ -11,7 +11,7 @@ served from cache, a per-service table (cache identifier, so `steam`,
 `epicgames` and so on), cache usage against its limit, request counts and
 `:443` passthrough traffic.
 
-![The full CacheParty dashboard during a Steam download, with the Steam games downloaded (names and pictures), per-client, upstream domain and HTTPS domain tables, storage, request counts and network addresses](images/dashboard.png)
+![The full CacheParty dashboard during a Steam download, with the Steam games downloaded (names, pictures and Purge links), per-client, upstream domain and HTTPS domain tables, storage, request counts and network addresses](images/dashboard.png)
 
 Bytes are counted as they move rather than when a request ends, so a long
 download shows as steady throughput, not a spike at the end. "From the
@@ -52,8 +52,9 @@ internet access keeps Steam IDs bare:
 
 With `GROUP_STEAM_DEPOTS` on (the default), the depots of one Steam game
 become one row. Its traffic is the sum of its depots, and it links to the game
-on SteamDB. Click **N depots** to list the depots under it; each depot can
-still be purged on its own. A game seen through only one depot keeps its depot
+on SteamDB. Its **Purge** link removes all of its depots at once. Click
+**N depots** to list the depots under it; each depot can still be purged on
+its own. A game seen through only one depot keeps its depot
 row.
 
 Depots the map does not know, such as a game released since the last
