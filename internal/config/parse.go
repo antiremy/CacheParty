@@ -112,7 +112,7 @@ func ParseDuration(s string) (time.Duration, error) {
 		} else {
 			s = ""
 		}
-		if n > int64(math.MaxInt64/int64(unit)) {
+		if n > int64(math.MaxInt64/unit) {
 			return 0, fmt.Errorf("duration %q overflows", orig)
 		}
 		total += time.Duration(n) * unit

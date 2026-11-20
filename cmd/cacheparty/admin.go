@@ -185,7 +185,7 @@ func purgeCmd(args []string, stdin io.Reader, stdout io.Writer) error {
 	if !*yes {
 		fmt.Fprint(stdout, "Remove them? [y/N] ")
 		var answer string
-		fmt.Fscanln(stdin, &answer)
+		_, _ = fmt.Fscanln(stdin, &answer)
 		if a := strings.ToLower(answer); a != "y" && a != "yes" {
 			fmt.Fprintln(stdout)
 			return errors.New("not confirmed; nothing removed (-yes skips the question)")
