@@ -94,10 +94,33 @@ func (d *Dashboard) purgeApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tag := a.tag(body.Service)
-	res := d.cfg.Purge(tag, !body.Confirm)
+	if a.Kind == "game" && !d.names.steamLoaded() {
+		writeError(w, http.StatusConflict, "game names are not loaded yet, so the game's depots are not known")
+		return
+	}
+	res := d.cfg.Purge(d.purgeMatch(body.Service, a), !body.Confirm)
 	if body.Confirm {
 		d.cfg.Log.Info("cache purged from dashboard", "remote", r.RemoteAddr, "app", tag,
 			"objects", res.Objects, "chunks", res.Chunks, "freed_bytes", res.Bytes)
 	}
 	writeJSON(w, http.StatusOK, purgeJSON{tag, body.Confirm, res.Objects, res.Chunks, res.Bytes})
+}
+
+// purgeMatch accepts the cache tags that purging a covers. A Steam "game"
+// covers every cached depot the game owns, whether or not the dashboard's
+// totals have seen it.
+func (d *Dashboard) purgeMatch(service string, a app) func(string) bool {
+	want := a.tag(service)
+	if a.Kind != "game" {
+		return func(tag string) bool { return tag == want }
+	}
+	prefix := service + "/depot/"
+	return func(tag string) bool {
+		id, ok := strings.CutPrefix(tag, prefix)
+		if !ok {
+			return false
+		}
+		_, game := d.names.lookup(service, app{"depot", id})
+		return game == a.ID
+	}
 }

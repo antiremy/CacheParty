@@ -15,7 +15,7 @@ import (
 // Live lists the variables that can be changed while running (from the
 // dashboard). Everything else needs a restart and comes only from the
 // environment.
-var Live = []string{"CACHE_DISK_SIZE", "MIN_FREE_DISK", "CACHE_MAX_AGE", "CACHE_MAX_PREFETCHES", "UPSTREAM_RATE_LIMIT", "BYPASS_DOMAINS"}
+var Live = []string{"CACHE_DISK_SIZE", "MIN_FREE_DISK", "CACHE_MAX_AGE", "CACHE_MAX_PREFETCHES", "UPSTREAM_RATE_LIMIT", "BYPASS_DOMAINS", "GAME_NAMES", "GROUP_STEAM_DEPOTS", "GAME_PICTURES"}
 
 // Overrides are values saved from the dashboard, kept in a JSON file
 // (SETTINGS_FILE) of variable name to value, written the same way as the

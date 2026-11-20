@@ -138,6 +138,10 @@ tbody tr:last-child td { border-bottom: 0; }
 #apps-service { overflow-wrap: anywhere; }
 td a { color: inherit; text-underline-offset: 3px; }
 td .badge { margin-left: 6px; }
+td .depots { margin-left: 8px; }
+tr.sub td:first-child { padding-left: 24px; }
+#apps .cover { display: inline-block; width: 92px; height: 43px; object-fit: cover; border-radius: 4px; vertical-align: middle; margin: -6px 12px -6px 0; }
+#apps.pictures tr.sub td:first-child { padding-left: 116px; }
 
 .storage-line { font-size: 15px; }
 .meter { height: 10px; border-radius: 4px; background: var(--track); overflow: hidden; margin: 8px 0 4px; }

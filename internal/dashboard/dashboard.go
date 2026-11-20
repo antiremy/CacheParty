@@ -70,9 +70,13 @@ type Config struct {
 
 	// Verify checks the cache against its index (see store.FileStore.Scrub).
 	Verify func(ctx context.Context, dryRun bool) (store.ScrubResult, error)
-	// Purge removes every cached chunk of objects tagged app (see
-	// evict.Evictor.Purge), or with dryRun only counts them.
-	Purge func(app string, dryRun bool) evict.PurgeResult
+	// Purge removes every cached chunk of objects whose tag match accepts
+	// (see evict.Evictor.Purge), or with dryRun only counts them.
+	Purge func(match func(app string) bool, dryRun bool) evict.PurgeResult
+
+	// HTTPClient downloads Steam game names while GAME_NAMES is on; nil
+	// never downloads them.
+	HTTPClient *http.Client
 
 	Log *slog.Logger
 }
@@ -85,6 +89,7 @@ type Dashboard struct {
 	current atomic.Pointer[config.Config]
 	failMu  sync.Mutex // serializes failed logins, to slow guessing
 	mux     *http.ServeMux
+	names   *names
 }
 
 // New returns a Dashboard. Call Run to start sampling.
@@ -94,6 +99,7 @@ func New(cfg Config) *Dashboard {
 	}
 	d := &Dashboard{cfg: cfg, started: time.Now(), hist: newHistory(), mux: http.NewServeMux()}
 	d.current.Store(cfg.Settings)
+	d.names = newNames(cfg.HTTPClient, cfg.Settings.GameNamesFile, cfg.Log)
 	if cfg.StatsFile != "" {
 		seen, err := cfg.Traffic.load(cfg.StatsFile)
 		if err != nil {
@@ -114,9 +120,13 @@ func New(cfg Config) *Dashboard {
 	return d
 }
 
+// steamPictures serves the game pictures shown with GAME_PICTURES. The page
+// loads them only while that is on.
+const steamPictures = "https://shared.akamai.steamstatic.com"
+
 func (d *Dashboard) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h := w.Header()
-	h.Set("Content-Security-Policy", "default-src 'self'; frame-ancestors 'none'")
+	h.Set("Content-Security-Policy", "default-src 'self'; img-src 'self' "+steamPictures+"; frame-ancestors 'none'")
 	h.Set("X-Content-Type-Options", "nosniff")
 	h.Set("Referrer-Policy", "no-referrer")
 	d.mux.ServeHTTP(w, r)
@@ -124,6 +134,9 @@ func (d *Dashboard) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Run samples once a second until ctx ends.
 func (d *Dashboard) Run(ctx context.Context) {
+	if d.cfg.HTTPClient != nil {
+		go d.names.run(ctx, func() bool { return d.current.Load().GameNames })
+	}
 	t := time.NewTicker(time.Second)
 	defer t.Stop()
 	nextSave := time.Now().Add(saveEvery)
@@ -333,17 +346,28 @@ type appJSON struct {
 	Sent        int64   `json:"sent"`
 	Fetched     int64   `json:"fetched"`
 	LastActive  int64   `json:"lastActive"` // unix ms; 0 if not seen moving
+
+	// With GAME_NAMES on: the game's name, if known, and for a Steam depot
+	// the app ID of the game that owns it.
+	Name string `json:"name,omitempty"`
+	Game string `json:"game,omitempty"`
+	// Depots holds the depots of a "game" row (GROUP_STEAM_DEPOTS).
+	Depots []appJSON `json:"depots,omitempty"`
 }
 
 type appsJSON struct {
 	Service string    `json:"service"`
 	Apps    []appJSON `json:"apps"`
+	// Pictures is GAME_PICTURES: the page shows Steam's picture of each
+	// game, which the viewer's browser loads from Steam.
+	Pictures bool `json:"pictures,omitempty"`
 }
 
 // serveApps lists the games downloaded through one service in total.
 func (d *Dashboard) serveApps(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	out := appsJSON{Service: name, Apps: []appJSON{}}
+	cfg := d.current.Load()
 	rates := d.hist.serviceRates()
 	for k, v := range d.cfg.Traffic.snapshot() {
 		if k.Service != name || k.Group != "" || k.App == (app{}) {
@@ -354,10 +378,22 @@ func (d *Dashboard) serveApps(w http.ResponseWriter, r *http.Request) {
 		if t := d.hist.lastActive(k); !t.IsZero() {
 			a.LastActive = t.UnixMilli()
 		}
+		if cfg.GameNames {
+			a.Name, a.Game = d.names.lookup(name, k.App)
+		}
 		out.Apps = append(out.Apps, a)
 	}
-	sort.Slice(out.Apps, func(i, j int) bool {
-		a, b := out.Apps[i], out.Apps[j]
+	if cfg.GameNames && cfg.GroupSteamDepots {
+		out.Apps = groupByGame(out.Apps)
+	}
+	out.Pictures = cfg.GameNames && cfg.GamePictures && name == "steam"
+	sortApps(out.Apps)
+	writeJSON(w, http.StatusOK, out)
+}
+
+func sortApps(l []appJSON) {
+	sort.Slice(l, func(i, j int) bool {
+		a, b := l[i], l[j]
 		if a.SentRate != b.SentRate {
 			return a.SentRate > b.SentRate
 		}
@@ -366,7 +402,38 @@ func (d *Dashboard) serveApps(w http.ResponseWriter, r *http.Request) {
 		}
 		return a.ID < b.ID
 	})
-	writeJSON(w, http.StatusOK, out)
+}
+
+// groupByGame folds the depots of each Steam game into one "game" row that
+// sums them and lists them in Depots. A game seen through one depot keeps
+// its depot row.
+func groupByGame(apps []appJSON) []appJSON {
+	byGame := map[string][]appJSON{}
+	out := make([]appJSON, 0, len(apps))
+	for _, a := range apps {
+		if a.Game == "" {
+			out = append(out, a)
+			continue
+		}
+		byGame[a.Game] = append(byGame[a.Game], a)
+	}
+	for game, depots := range byGame {
+		if len(depots) == 1 {
+			out = append(out, depots[0])
+			continue
+		}
+		sortApps(depots)
+		g := appJSON{Kind: "game", ID: game, Name: depots[0].Name, Depots: depots}
+		for _, a := range depots {
+			g.SentRate += a.SentRate
+			g.FetchedRate += a.FetchedRate
+			g.Sent += a.Sent
+			g.Fetched += a.Fetched
+			g.LastActive = max(g.LastActive, a.LastActive)
+		}
+		out = append(out, g)
+	}
+	return out
 }
 
 type addrJSON struct {
@@ -420,6 +487,9 @@ var settingInfo = []struct{ Key, Label, Help string }{
 	{"CACHE_MAX_AGE", "Maximum age", "Chunks not read for this long are evicted, e.g. 90d, 12w, 1y."},
 	{"CACHE_MAX_PREFETCHES", "Read-ahead fetches", "Chunk fetches allowed to run ahead of clients, across all clients. 0 disables read-ahead."},
 	{"UPSTREAM_RATE_LIMIT", "Download speed limit", "Combined cap on downloads from the internet: cache misses, bypassed requests and HTTPS passthrough. Bits per second with k, m or g, e.g. 500m. Cache hits are not limited. 0 removes the limit."},
+	{"GAME_NAMES", "Game names", "true shows game names next to download IDs. Steam names come from lancache-pics, a depot map of about 60 MB downloaded from GitHub and checked for updates once a day."},
+	{"GROUP_STEAM_DEPOTS", "Group Steam depots", "true shows the depots of one Steam game as one row, with each depot listed under it. Needs game names on."},
+	{"GAME_PICTURES", "Game pictures", "true shows Steam's picture of each Steam game. Each browser viewing the dashboard loads them from Steam's servers, so Valve sees which games were downloaded here. Needs game names on."},
 	{"BYPASS_DOMAINS", "Bypassed domains", "Comma-separated domains whose traffic skips the cache and goes straight to the origin, e.g. example.com, *.cdn.example.net. example.com also covers its subdomains; *.example.com covers subdomains only. Empty bypasses nothing."},
 	{"CACHE_SLICE_SIZE", "Slice size", "Changing it starts a fresh cache."},
 	{"UPSTREAM_DNS", "Upstream DNS", ""},
@@ -434,6 +504,7 @@ var settingInfo = []struct{ Key, Label, Help string }{
 	{"SNI_ADDR", "HTTPS passthrough listener", ""},
 	{"METRICS_ADDR", "Metrics and dashboard listener", ""},
 	{"SETTINGS_FILE", "Settings file", ""},
+	{"GAME_NAMES_FILE", "Game names file", "Where the downloaded Steam names are kept, so a restart does not download them again; off keeps them in memory only."},
 	{"STATS_FILE", "Traffic totals file", "Where the dashboard's totals are kept across restarts; off keeps them in memory only."},
 }
 
@@ -496,6 +567,7 @@ func (d *Dashboard) updateSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	d.current.Store(cfg)
 	d.cfg.Apply(cfg)
+	d.names.poke()
 	changed := make([]any, 0, 2*len(body.Values)+2)
 	changed = append(changed, "remote", r.RemoteAddr)
 	for k, v := range body.Values {

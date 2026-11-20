@@ -2,7 +2,7 @@ const BYTE_UNITS = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"];
 const RATE_UNITS = ["bit/s", "kbit/s", "Mbit/s", "Gbit/s", "Tbit/s"];
 const BYTE_RATE_UNITS = ["B/s", "kB/s", "MB/s", "GB/s", "TB/s"];
 
-export const KIND_LABELS = { depot: "Depot", product: "Product", app: "App", host: "Host" };
+export const KIND_LABELS = { game: "Game", depot: "Depot", product: "Product", app: "App", host: "Host" };
 
 export function fmtBytes(n) {
   let i = 0;
@@ -48,5 +48,6 @@ export function fmtAgo(ms, now) {
 }
 
 export function appLabel(a) {
-  return a.kind === "host" ? a.id : `${(KIND_LABELS[a.kind] || a.kind).toLowerCase()} ${a.id}`;
+  const label = a.kind === "host" ? a.id : `${(KIND_LABELS[a.kind] || a.kind).toLowerCase()} ${a.id}`;
+  return a.name ? `${a.name} (${label})` : label;
 }

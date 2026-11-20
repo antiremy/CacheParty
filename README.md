@@ -13,7 +13,7 @@ Epic, Riot, Xbox/WSUS, PlayStation and anything else in
 Drop-in means the same environment variables and the same `access.log` format. Non-goals: caching HTTPS (`:443` is a blind SNI
 passthrough), reading nginx's on-disk cache format.
 
-[![The CacheParty dashboard during a Steam download: throughput to clients and from the internet, and cache disk reads and writes](docs/images/dashboard-charts.png)](docs/monitoring.md#dashboard)
+[![The CacheParty dashboard during a Steam download: throughput to clients and from the internet, and the Steam games downloaded, each with its name and picture](docs/images/dashboard-charts.png)](docs/monitoring.md#dashboard)
 
 ## Advantages over stock lancache
 
@@ -38,6 +38,7 @@ passthrough), reading nginx's on-disk cache format.
 - **Internet download speed limit.** `UPSTREAM_RATE_LIMIT` (e.g. `500m`)
   caps how much internet bandwidth the cache uses, so a big download doesn't
   slow down the rest of the network. Cache hits still run at full LAN speed.
+  The daily Steam game-name download is not limited.
 - **Fast restarts.** A persistent chunk index (bbolt) means startup does not
   walk millions of files.
 - **Built-in dashboard.** Live throughput, cache hit share, and per-service,
