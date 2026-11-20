@@ -70,13 +70,13 @@ func TestVerifyCacheReadOnly(t *testing.T) {
 
 func TestPurgeApp(t *testing.T) {
 	type call struct {
-		app    string
+		apps   string
 		dryRun bool
 	}
 	var calls []call
 	srv, _ := newTestDashboard(t, "hunter2", func(c *Config) {
-		c.Purge = func(app string, dryRun bool) evict.PurgeResult {
-			calls = append(calls, call{app, dryRun})
+		c.Purge = func(match func(string) bool, dryRun bool) evict.PurgeResult {
+			calls = append(calls, call{strings.Join(matching(match), ","), dryRun})
 			return evict.PurgeResult{Objects: 2, Chunks: 5, Bytes: 5 << 20}
 		}
 	})
@@ -110,37 +110,60 @@ func TestPurgeApp(t *testing.T) {
 	}
 }
 
+// cachedTags stands in for the tags of objects in the cache index.
+var cachedTags = []string{
+	"steam/depot/214491", "steam/depot/214492", "steam/depot/228988", "steam/depot/999",
+	"steam/depot/990081", "steam/game/214490", "epicgames/depot/214491",
+}
+
+func matching(match func(string) bool) []string {
+	var got []string
+	for _, tag := range cachedTags {
+		if match(tag) {
+			got = append(got, tag)
+		}
+	}
+	return got
+}
+
 func TestPurgeGame(t *testing.T) {
-	var calls []string
-	tr := NewTraffic()
+	var calls [][]string
 	d := New(Config{
-		Traffic: tr, Stats: func() Stats { return Stats{} }, Settings: &config.Config{}, Log: quietLog(),
+		Traffic: NewTraffic(), Stats: func() Stats { return Stats{} }, Settings: &config.Config{}, Log: quietLog(),
 		Password: "hunter2",
-		Purge: func(app string, dryRun bool) evict.PurgeResult {
-			calls = append(calls, app)
-			return evict.PurgeResult{Objects: 1, Chunks: 2, Bytes: 3}
+		Purge: func(match func(string) bool, dryRun bool) evict.PurgeResult {
+			got := matching(match)
+			calls = append(calls, got)
+			return evict.PurgeResult{Objects: len(got), Chunks: 2 * len(got), Bytes: 3}
 		},
 	})
+	purge := func(body string) *httptest.ResponseRecorder {
+		r := httptest.NewRequest("POST", "/api/cache/purge", strings.NewReader(body))
+		r.Header.Set("Authorization", "Bearer hunter2")
+		rec := httptest.NewRecorder()
+		d.ServeHTTP(rec, r)
+		return rec
+	}
+	const game = `{"service":"steam","kind":"game","id":"214490","confirm":true}`
+
+	if rec := purge(game); rec.Code != http.StatusConflict || len(calls) != 0 {
+		t.Fatalf("without names: %d %s, calls %v", rec.Code, rec.Body, calls)
+	}
+
 	s, err := parseSteamMap(strings.NewReader(testSteamMap))
 	if err != nil {
 		t.Fatal(err)
 	}
 	d.names.set(s)
-	for _, p := range []string{"/depot/214492/chunk/a", "/depot/214491/chunk/a", "/depot/228988/chunk/a", "/depot/999/chunk/a"} {
-		tr.Flow("steam", get(p)).Sent.Add(1)
-	}
-
-	r := httptest.NewRequest("POST", "/api/cache/purge", strings.NewReader(`{"service":"steam","kind":"game","id":"214490"}`))
-	r.Header.Set("Authorization", "Bearer hunter2")
-	rec := httptest.NewRecorder()
-	d.ServeHTTP(rec, r)
+	rec := purge(game)
 	var got purgeJSON
 	json.Unmarshal(rec.Body.Bytes(), &got)
-	if want := (purgeJSON{"steam/game/214490", false, 2, 4, 6}); rec.Code != http.StatusOK || got != want {
+	if want := (purgeJSON{"steam/game/214490", true, 2, 4, 3}); rec.Code != http.StatusOK || got != want {
 		t.Fatalf("%d %+v, want %+v", rec.Code, got, want)
 	}
-	if want := []string{"steam/depot/214491", "steam/depot/214492"}; !slices.Equal(calls, want) {
-		t.Fatalf("calls = %v, want %v", calls, want)
+	// The traffic totals saw none of these depots; the cache index decides.
+	if want := []string{"steam/depot/214491", "steam/depot/214492"}; len(calls) != 1 || !slices.Equal(calls[0], want) {
+		t.Fatalf("calls = %v, want [%v]", calls, want)
 	}
 }
 

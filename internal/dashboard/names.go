@@ -191,6 +191,12 @@ func (n *names) set(s *steamNames) {
 	n.mu.Unlock()
 }
 
+func (n *names) steamLoaded() bool {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+	return n.steam != nil
+}
+
 func (n *names) release() string {
 	n.mu.RLock()
 	defer n.mu.RUnlock()

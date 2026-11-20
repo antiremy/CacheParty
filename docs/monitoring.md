@@ -53,7 +53,8 @@ internet access keeps Steam IDs bare:
 
 With `GROUP_STEAM_DEPOTS` on (the default), the depots of one Steam game
 become one row. Its traffic is the sum of its depots, and it links to the game
-on SteamDB. Its **Purge** link removes all of its depots at once. Click
+on SteamDB. Its **Purge** link removes all of its cached depots at once,
+including ones not listed under it. Click
 **N depots** to list the depots under it; each depot can still be purged on
 its own. A game seen through only one depot keeps its depot
 row.

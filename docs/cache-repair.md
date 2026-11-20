@@ -48,7 +48,10 @@ service's breakdown has a **Purge** link that shows the same count and asks
 for confirmation. The API is `POST /api/cache/purge` with
 `{"service", "kind", "id", "confirm"}`; without `"confirm": true` it only
 reports what would be removed. A grouped Steam game (`"kind": "game"`, the
-app ID as `"id"`) purges every depot the dashboard lists under it.
+app ID as `"id"`) purges every cached depot the game owns, found from the
+cache index, so depots the dashboard's totals never saw are removed too.
+Game names must be loaded to know which depots those are; until they are,
+the request fails with 409 and nothing is removed.
 
 ### How chunks are found
 

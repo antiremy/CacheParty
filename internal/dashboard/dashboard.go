@@ -70,9 +70,9 @@ type Config struct {
 
 	// Verify checks the cache against its index (see store.FileStore.Scrub).
 	Verify func(ctx context.Context, dryRun bool) (store.ScrubResult, error)
-	// Purge removes every cached chunk of objects tagged app (see
-	// evict.Evictor.Purge), or with dryRun only counts them.
-	Purge func(app string, dryRun bool) evict.PurgeResult
+	// Purge removes every cached chunk of objects whose tag match accepts
+	// (see evict.Evictor.Purge), or with dryRun only counts them.
+	Purge func(match func(app string) bool, dryRun bool) evict.PurgeResult
 
 	// HTTPClient downloads Steam game names while GAME_NAMES is on; nil
 	// never downloads them.

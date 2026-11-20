@@ -361,8 +361,8 @@ type PurgeResult struct {
 	Bytes   int64 // bytes they held
 }
 
-// Purge removes every cached chunk of the objects whose App is app, the way
-// a sweep evicts: a client reading one of them keeps its open file, and
+// Purge removes every cached chunk of the objects whose App match accepts,
+// the way a sweep evicts: a client reading one of them keeps its open file, and
 // one that needs a removed chunk next fetches it again. Chunks of a slice
 // size other than the current one are not found; they age out as usual.
 //
@@ -372,14 +372,12 @@ type PurgeResult struct {
 // fetched while Purge runs can survive it.
 //
 // It may run concurrently with a sweep.
-func (e *Evictor) Purge(app string, dryRun bool) PurgeResult {
+// Objects with no recorded app are never offered to match.
+func (e *Evictor) Purge(match func(app string) bool, dryRun bool) PurgeResult {
 	var res PurgeResult
-	if app == "" {
-		return res // objects with no recorded app are not one game's
-	}
 	st, slice := e.cfg.Store, e.cfg.SliceSize
 	st.IterateObjects(func(k store.Key, m *store.ObjectMeta) bool {
-		if m.App != app {
+		if m.App == "" || !match(m.App) {
 			return true
 		}
 		found := false
@@ -401,7 +399,7 @@ func (e *Evictor) Purge(app string, dryRun bool) PurgeResult {
 	if !dryRun && res.Chunks > 0 {
 		e.purged.Store(true)
 		chunks, bytes := st.Usage()
-		e.cfg.Log.Info("cache purge", "app", app, "objects", res.Objects, "chunks", res.Chunks,
+		e.cfg.Log.Info("cache purge", "objects", res.Objects, "chunks", res.Chunks,
 			"freed_bytes", res.Bytes, "cached_chunks", chunks, "cached_bytes", bytes)
 	}
 	return res
