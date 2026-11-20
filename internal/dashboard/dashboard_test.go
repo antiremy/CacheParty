@@ -410,8 +410,9 @@ func TestServesPage(t *testing.T) {
 			t.Fatal(err)
 		}
 		resp.Body.Close()
-		if resp.StatusCode != http.StatusOK || resp.Header.Get("Content-Security-Policy") == "" {
-			t.Fatalf("%s: %d, CSP %q", path, resp.StatusCode, resp.Header.Get("Content-Security-Policy"))
+		csp := resp.Header.Get("Content-Security-Policy")
+		if resp.StatusCode != http.StatusOK || !strings.Contains(csp, "default-src 'self'") || !strings.Contains(csp, "img-src 'self' "+steamPictures+";") {
+			t.Fatalf("%s: %d, CSP %q", path, resp.StatusCode, csp)
 		}
 	}
 }
