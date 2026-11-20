@@ -504,7 +504,7 @@ var settingInfo = []struct{ Key, Label, Help string }{
 	{"SNI_ADDR", "HTTPS passthrough listener", ""},
 	{"METRICS_ADDR", "Metrics and dashboard listener", ""},
 	{"SETTINGS_FILE", "Settings file", ""},
-	{"GAME_NAMES_FILE", "Game names file", "Where the downloaded Steam names are kept, so a restart does not download them again."},
+	{"GAME_NAMES_FILE", "Game names file", "Where the downloaded Steam names are kept, so a restart does not download them again; off keeps them in memory only."},
 	{"STATS_FILE", "Traffic totals file", "Where the dashboard's totals are kept across restarts; off keeps them in memory only."},
 }
 

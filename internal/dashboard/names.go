@@ -142,9 +142,12 @@ func (n *names) run(ctx context.Context, on func() bool) {
 			n.load()
 			fallthrough
 		case !time.Now().Before(next):
-			if err := n.update(ctx); err != nil {
+			if err := n.updateWhileOn(ctx, on); err != nil {
 				if ctx.Err() != nil {
 					return
+				}
+				if !on() {
+					continue
 				}
 				n.log.Warn("game names: Steam names not updated", "err", err)
 				next = time.Now().Add(steamRetryAfter)
@@ -159,6 +162,27 @@ func (n *names) run(ctx context.Context, on func() bool) {
 		case <-time.After(time.Hour):
 		}
 	}
+}
+
+func (n *names) updateWhileOn(ctx context.Context, on func() bool) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case <-n.wake:
+				if !on() {
+					cancel()
+					return
+				}
+			}
+		}
+	}()
+	return n.update(ctx)
 }
 
 func (n *names) set(s *steamNames) {
@@ -314,13 +338,17 @@ func parseSteamMap(r io.Reader) (*steamNames, error) {
 			if err != nil {
 				return nil, err
 			}
+			var raw json.RawMessage
+			if err := dec.Decode(&raw); err != nil {
+				return nil, err
+			}
 			var e struct {
 				Owner int64    `json:"ownerId"`
 				Apps  []int64  `json:"appIds"`
 				Names []string `json:"appNames"`
 			}
-			if err := dec.Decode(&e); err != nil {
-				return nil, err
+			if json.Unmarshal(raw, &e) != nil {
+				continue
 			}
 			depot, err := strconv.ParseUint(key.(string), 10, 32)
 			i := slices.Index(e.Apps, e.Owner)

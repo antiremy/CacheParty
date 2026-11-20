@@ -36,7 +36,7 @@ type Config struct {
 	GameNames        bool   // GAME_NAMES: show game names on the dashboard
 	GroupSteamDepots bool   // GROUP_STEAM_DEPOTS: one dashboard row per Steam game
 	GamePictures     bool   // GAME_PICTURES: show Steam game pictures on the dashboard
-	GameNamesFile    string // GAME_NAMES_FILE: where downloaded Steam names are kept
+	GameNamesFile    string // GAME_NAMES_FILE: where downloaded Steam names are kept; "" disables it
 
 	SettingsFile      string // SETTINGS_FILE: values saved from the dashboard
 	StatsFile         string // STATS_FILE: dashboard traffic totals kept across restarts; "" disables it
@@ -127,7 +127,7 @@ func Load(getenv func(string) string) (*Config, error) {
 	if c.GamePictures, err = parseSwitch(get("GAME_PICTURES")); err != nil {
 		return nil, fmt.Errorf("GAME_PICTURES: %w", err)
 	}
-	c.GameNamesFile = get("GAME_NAMES_FILE")
+	c.GameNamesFile = listenAddr(get("GAME_NAMES_FILE")) // "off" disables it
 	c.SettingsFile = get("SETTINGS_FILE")
 	c.StatsFile = listenAddr(get("STATS_FILE")) // "off" disables it
 	c.DashboardPassword = get("DASHBOARD_PASSWORD")

@@ -32,6 +32,20 @@ const testSteamMap = `{
 
 func quietLog() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
 
+func TestParseSteamMapSkipsOddRecords(t *testing.T) {
+	s, err := parseSteamMap(strings.NewReader(`{"depotMappings": {
+		"1": {"ownerId": 1.5, "appIds": [1], "appNames": ["Float owner"]},
+		"2": {"ownerId": 2, "appIds": ["2"], "appNames": ["String app"]},
+		"3": {"ownerId": 3, "appIds": [3], "appNames": ["Fine"]}
+	}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(s.Depots) != 1 || s.Apps[3] != "Fine" {
+		t.Fatalf("depots %v, apps %v", s.Depots, s.Apps)
+	}
+}
+
 func TestParseSteamMap(t *testing.T) {
 	s, err := parseSteamMap(strings.NewReader(testSteamMap))
 	if err != nil {
@@ -151,6 +165,38 @@ func TestNamesRunFollowsSetting(t *testing.T) {
 	on.Store(false)
 	n.poke()
 	waitFor("names kept when turned off", func() bool { return n.release() == "" })
+}
+
+func TestNamesTurnedOffMidDownloadStopsIt(t *testing.T) {
+	started, stopped := make(chan struct{}), make(chan struct{})
+	mux := http.NewServeMux()
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	mux.HandleFunc("/release", func(_ http.ResponseWriter, r *http.Request) {
+		close(started)
+		<-r.Context().Done()
+		close(stopped)
+	})
+	old := steamRelease
+	steamRelease = srv.URL + "/release"
+	t.Cleanup(func() { steamRelease = old })
+
+	n := newNames(srv.Client(), "", quietLog())
+	var on atomic.Bool
+	on.Store(true)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { n.run(ctx, on.Load); close(done) }()
+	defer func() { cancel(); <-done }()
+
+	<-started
+	on.Store(false)
+	n.poke()
+	select {
+	case <-stopped:
+	case <-time.After(5 * time.Second):
+		t.Fatal("download kept going after names were turned off")
+	}
 }
 
 func TestServeAppsGameNames(t *testing.T) {

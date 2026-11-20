@@ -193,6 +193,10 @@ func TestLoadGameNames(t *testing.T) {
 	if err != nil || c.GameNames || c.GroupSteamDepots || !c.GamePictures {
 		t.Fatalf("set: %+v, %v", c, err)
 	}
+	c, err = Load(get(map[string]string{"GAME_NAMES_FILE": "OFF"}))
+	if err != nil || c.GameNamesFile != "" {
+		t.Fatalf("GAME_NAMES_FILE=OFF kept %q, %v", c.GameNamesFile, err)
+	}
 	if _, err := Load(get(map[string]string{"GAME_NAMES": "ture"})); err == nil {
 		t.Fatal("a typo was read as a switch value")
 	}
