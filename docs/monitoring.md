@@ -44,7 +44,8 @@ internet access keeps Steam IDs bare:
 - **Steam** depots are named from
   [lancache-pics](https://github.com/regix1/lancache-pics), a map of each
   depot to the game that owns it, built from Steam's own metadata. CacheParty
-  downloads it from GitHub (about 60 MB, through `UPSTREAM_DNS`), checks its
+  downloads it from GitHub (about 60 MB, through `UPSTREAM_DNS`, not limited
+  by `UPSTREAM_RATE_LIMIT`, so it never slows game downloads), checks its
   SHA-256, and checks for a new release once a day. It keeps a small copy
   (about 2 MB) in `GAME_NAMES_FILE`, so a restart does not download it again.
   The map is read a depot at a time and takes about 3 MB of memory once

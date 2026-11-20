@@ -38,6 +38,7 @@ passthrough), reading nginx's on-disk cache format.
 - **Internet download speed limit.** `UPSTREAM_RATE_LIMIT` (e.g. `500m`)
   caps how much internet bandwidth the cache uses, so a big download doesn't
   slow down the rest of the network. Cache hits still run at full LAN speed.
+  The daily Steam game-name download is not limited.
 - **Fast restarts.** A persistent chunk index (bbolt) means startup does not
   walk millions of files.
 - **Built-in dashboard.** Live throughput, cache hit share, and per-service,
