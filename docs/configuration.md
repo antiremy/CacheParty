@@ -25,6 +25,7 @@ defaults as lancachenet/monolithic, plus a few additions (marked "added").
 | `METRICS_ADDR`         | `:8080`                                       | Metrics, health and dashboard listener; `off` disables (added)                                                          |
 | `GAME_NAMES`           | `false`                                       | Show game names on the dashboard; turns on the Steam name download, see [Game names](monitoring.md#game-names) (added) |
 | `GROUP_STEAM_DEPOTS`   | `true`                                        | With game names on, show a Steam game's depots as one row (added)                                                       |
+| `GAME_PICTURES`        | `false`                                       | With game names on, show Steam game pictures, loaded by the browser from Steam, see [Game pictures](monitoring.md#game-pictures) (added) |
 | `GAME_NAMES_FILE`      | `/data/game-names.json`                       | Where the downloaded Steam names are kept across restarts (added)                                                       |
 | `SETTINGS_FILE`        | `/data/settings.json`                         | Where settings changed from the dashboard are saved (added)                                                             |
 | `STATS_FILE`           | `/data/stats.json`                            | Where the dashboard's traffic totals are kept across restarts; `off` keeps them in memory only (added)                  |
@@ -33,8 +34,8 @@ defaults as lancachenet/monolithic, plus a few additions (marked "added").
 ## Live settings
 
 `CACHE_DISK_SIZE`, `MIN_FREE_DISK`, `CACHE_MAX_AGE`, `CACHE_MAX_PREFETCHES`,
-`UPSTREAM_RATE_LIMIT`, `BYPASS_DOMAINS`, `GAME_NAMES` and `GROUP_STEAM_DEPOTS`
-can be edited in the
+`UPSTREAM_RATE_LIMIT`, `BYPASS_DOMAINS`, `GAME_NAMES`, `GROUP_STEAM_DEPOTS` and
+`GAME_PICTURES` can be edited in the
 [dashboard](monitoring.md#dashboard) while CacheParty runs (this needs
 `DASHBOARD_PASSWORD`).
 

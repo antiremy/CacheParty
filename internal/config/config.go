@@ -35,6 +35,7 @@ type Config struct {
 
 	GameNames        bool   // GAME_NAMES: show game names on the dashboard
 	GroupSteamDepots bool   // GROUP_STEAM_DEPOTS: one dashboard row per Steam game
+	GamePictures     bool   // GAME_PICTURES: show Steam game pictures on the dashboard
 	GameNamesFile    string // GAME_NAMES_FILE: where downloaded Steam names are kept
 
 	SettingsFile      string // SETTINGS_FILE: values saved from the dashboard
@@ -64,6 +65,7 @@ var Defaults = map[string]string{
 	"METRICS_ADDR":         ":8080",
 	"GAME_NAMES":           "false",
 	"GROUP_STEAM_DEPOTS":   "true",
+	"GAME_PICTURES":        "false",
 	"GAME_NAMES_FILE":      "/data/game-names.json",
 	"SETTINGS_FILE":        "/data/settings.json",
 	"STATS_FILE":           "/data/stats.json",
@@ -121,6 +123,9 @@ func Load(getenv func(string) string) (*Config, error) {
 	}
 	if c.GroupSteamDepots, err = parseSwitch(get("GROUP_STEAM_DEPOTS")); err != nil {
 		return nil, fmt.Errorf("GROUP_STEAM_DEPOTS: %w", err)
+	}
+	if c.GamePictures, err = parseSwitch(get("GAME_PICTURES")); err != nil {
+		return nil, fmt.Errorf("GAME_PICTURES: %w", err)
 	}
 	c.GameNamesFile = get("GAME_NAMES_FILE")
 	c.SettingsFile = get("SETTINGS_FILE")

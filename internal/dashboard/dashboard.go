@@ -120,9 +120,13 @@ func New(cfg Config) *Dashboard {
 	return d
 }
 
+// steamPictures serves the game pictures shown with GAME_PICTURES. The page
+// loads them only while that is on.
+const steamPictures = "https://shared.akamai.steamstatic.com"
+
 func (d *Dashboard) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h := w.Header()
-	h.Set("Content-Security-Policy", "default-src 'self'; frame-ancestors 'none'")
+	h.Set("Content-Security-Policy", "default-src 'self'; img-src 'self' "+steamPictures+"; frame-ancestors 'none'")
 	h.Set("X-Content-Type-Options", "nosniff")
 	h.Set("Referrer-Policy", "no-referrer")
 	d.mux.ServeHTTP(w, r)
@@ -354,6 +358,9 @@ type appJSON struct {
 type appsJSON struct {
 	Service string    `json:"service"`
 	Apps    []appJSON `json:"apps"`
+	// Pictures is GAME_PICTURES: the page shows Steam's picture of each
+	// game, which the viewer's browser loads from Steam.
+	Pictures bool `json:"pictures,omitempty"`
 }
 
 // serveApps lists the games downloaded through one service in total.
@@ -379,6 +386,7 @@ func (d *Dashboard) serveApps(w http.ResponseWriter, r *http.Request) {
 	if cfg.GameNames && cfg.GroupSteamDepots {
 		out.Apps = groupByGame(out.Apps)
 	}
+	out.Pictures = cfg.GameNames && cfg.GamePictures && name == "steam"
 	sortApps(out.Apps)
 	writeJSON(w, http.StatusOK, out)
 }
@@ -481,6 +489,7 @@ var settingInfo = []struct{ Key, Label, Help string }{
 	{"UPSTREAM_RATE_LIMIT", "Download speed limit", "Combined cap on downloads from the internet: cache misses, bypassed requests and HTTPS passthrough. Bits per second with k, m or g, e.g. 500m. Cache hits are not limited. 0 removes the limit."},
 	{"GAME_NAMES", "Game names", "true shows game names next to download IDs. Steam names come from lancache-pics, a depot map of about 60 MB downloaded from GitHub and checked for updates once a day."},
 	{"GROUP_STEAM_DEPOTS", "Group Steam depots", "true shows the depots of one Steam game as one row, with each depot listed under it. Needs game names on."},
+	{"GAME_PICTURES", "Game pictures", "true shows Steam's picture of each Steam game. Each browser viewing the dashboard loads them from Steam's servers, so Valve sees which games were downloaded here. Needs game names on."},
 	{"BYPASS_DOMAINS", "Bypassed domains", "Comma-separated domains whose traffic skips the cache and goes straight to the origin, e.g. example.com, *.cdn.example.net. example.com also covers its subdomains; *.example.com covers subdomains only. Empty bypasses nothing."},
 	{"CACHE_SLICE_SIZE", "Slice size", "Changing it starts a fresh cache."},
 	{"UPSTREAM_DNS", "Upstream DNS", ""},

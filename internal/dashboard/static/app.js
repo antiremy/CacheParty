@@ -370,6 +370,7 @@ function renderApps(data) {
   lastApps = data;
   const body = $("apps");
   body.textContent = "";
+  body.classList.toggle("pictures", !!data.pictures);
   $("apps-empty").hidden = data.apps.length > 0;
   // With every row named the column is "Game". Otherwise one kind gets the
   // column header, and a mix is labelled row by row.
@@ -386,6 +387,7 @@ function renderApps(data) {
     const tr = document.createElement("tr");
     if (sub) tr.className = "sub";
     const td = cell(tr, "");
+    if (data.pictures && !sub) picture(td, a);
     appName(td, a, sub);
     if (!kind && a.kind !== "other") {
       const badge = document.createElement("span");
@@ -431,11 +433,29 @@ function appName(td, a, sub) {
   td.appendChild(link);
 }
 
+// picture adds Steam's picture of a's game (GAME_PICTURES), or an empty
+// space of the same size so names line up. The viewer's browser loads it
+// from Steam.
+function picture(td, a) {
+  const id = a.kind === "game" ? a.id : a.game;
+  if (!id) {
+    const space = document.createElement("span");
+    space.className = "cover";
+    td.appendChild(space);
+    return;
+  }
+  const img = document.createElement("img");
+  img.className = "cover"; img.alt = ""; img.loading = "lazy";
+  img.src = `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${encodeURIComponent(id)}/header.jpg`;
+  img.addEventListener("error", () => { img.style.visibility = "hidden"; });
+  td.appendChild(img);
+}
+
 // depotsToggle adds a button that shows or hides a game's depots.
 function depotsToggle(td, a) {
   const btn = document.createElement("button");
   btn.type = "button"; btn.className = "link small depots";
-  btn.textContent = `${a.depots.length} depots`;
+  btn.textContent = a.depots.length === 1 ? "1 depot" : `${a.depots.length} depots`;
   btn.setAttribute("aria-expanded", openGames.has(a.id));
   btn.addEventListener("click", () => {
     if (!openGames.delete(a.id)) openGames.add(a.id);

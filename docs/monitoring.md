@@ -11,7 +11,7 @@ served from cache, a per-service table (cache identifier, so `steam`,
 `epicgames` and so on), cache usage against its limit, request counts and
 `:443` passthrough traffic.
 
-![The full CacheParty dashboard during a Steam download, with per-service, per-client, upstream domain and HTTPS domain tables, storage, request counts and network addresses](images/dashboard.png)
+![The full CacheParty dashboard during a Steam download, with the Steam games downloaded (names and pictures), per-client, upstream domain and HTTPS domain tables, storage, request counts and network addresses](images/dashboard.png)
 
 Bytes are counted as they move rather than when a request ends, so a long
 download shows as steady throughput, not a spike at the end. "From the
@@ -58,6 +58,17 @@ Depots the map does not know, such as a game released since the last
 release, stay as numbers. Names are for display only: traffic totals,
 `STATS_FILE`, cache tags and purges keep using the IDs, so turning names on or
 off changes nothing else.
+
+#### Game pictures
+
+Set `GAME_PICTURES=true` as well, or turn it on in the dashboard's settings, to
+show Steam's picture of each Steam game next to its name. It needs game names
+on, and is off by default because of what it tells Valve: each browser viewing
+the dashboard loads the pictures straight from Steam's servers
+(`shared.akamai.steamstatic.com`), so Valve and its CDN see which games were
+downloaded through the cache, and from which address. CacheParty itself never
+fetches them. With it off, the page asks Steam for nothing. On a network
+without internet access the pictures stay blank.
 
 ### Clients and upstream domains
 

@@ -173,7 +173,7 @@ func TestServeAppsGameNames(t *testing.T) {
 	tr.Flow("blizzard", get("/tpr/pro/data/a")).Sent.Add(1)
 	d.sample(t0.Add(time.Second))
 
-	apps := func(service string) []appJSON {
+	reply := func(service string) appsJSON {
 		t.Helper()
 		rec := httptest.NewRecorder()
 		d.ServeHTTP(rec, httptest.NewRequest("GET", "/api/services/"+service, nil))
@@ -181,7 +181,11 @@ func TestServeAppsGameNames(t *testing.T) {
 		if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
 			t.Fatal(err)
 		}
-		return got.Apps
+		return got
+	}
+	apps := func(service string) []appJSON { return reply(service).Apps }
+	if reply("steam").Pictures {
+		t.Fatal("pictures on by default")
 	}
 
 	got := apps("steam")
@@ -204,6 +208,15 @@ func TestServeAppsGameNames(t *testing.T) {
 		t.Fatalf("blizzard rows = %+v", b)
 	}
 
+	d.current.Store(&config.Config{GameNames: true, GamePictures: true})
+	if !reply("steam").Pictures || reply("blizzard").Pictures {
+		t.Fatal("pictures should be on for Steam only")
+	}
+	d.current.Store(&config.Config{GamePictures: true})
+	if reply("steam").Pictures {
+		t.Fatal("pictures on with names off")
+	}
+
 	d.current.Store(&config.Config{GameNames: true})
 	if got := apps("steam"); len(got) != 4 || got[0].Name != "Alien: Isolation" || got[0].Kind != "depot" {
 		t.Fatalf("ungrouped rows = %+v", got)
@@ -216,10 +229,10 @@ func TestServeAppsGameNames(t *testing.T) {
 
 func TestSettingsGameNames(t *testing.T) {
 	srv, applied := newTestDashboard(t, "pw")
-	if code, body := put(t, srv, `{"values":{"GAME_NAMES":"true","GROUP_STEAM_DEPOTS":"false"}}`, "pw", nil); code != http.StatusOK {
+	if code, body := put(t, srv, `{"values":{"GAME_NAMES":"true","GROUP_STEAM_DEPOTS":"false","GAME_PICTURES":"true"}}`, "pw", nil); code != http.StatusOK {
 		t.Fatalf("%d %s", code, body)
 	}
-	if !applied.GameNames || applied.GroupSteamDepots {
+	if !applied.GameNames || applied.GroupSteamDepots || !applied.GamePictures {
 		t.Fatalf("applied %+v", applied)
 	}
 	if code, _ := put(t, srv, `{"values":{"GAME_NAMES":"maybe"}}`, "pw", nil); code != http.StatusBadRequest {
