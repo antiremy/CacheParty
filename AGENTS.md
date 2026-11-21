@@ -56,6 +56,12 @@ with `go:embed`, so restart `go run ./cmd/cacheparty` to see edits. Its `/api/*`
 routes are registered in `dashboard.go`; changes to them get a test in the
 package's `*_test.go` files.
 
+The JS in `static/js/` is native ES modules loaded from `app.js`, one file per
+area: `stats.js` (tiles, charts and tables), `apps.js` (per-service downloads),
+`purge.js`, `settings.js`, `layout.js` (card columns), `chart.js`, and shared
+helpers in `format.js`, `dom.js` and `state.js`. Add new areas as new modules,
+not to `app.js`.
+
 ## Docs and commits
 
 - Behavior changes update the matching page in `docs/` in the same change.
