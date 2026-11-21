@@ -11,7 +11,7 @@ served from cache, a per-service table (cache identifier, so `steam`,
 `epicgames` and so on), cache usage against its limit, request counts and
 `:443` passthrough traffic.
 
-![The full CacheParty dashboard during a Steam download, with per-service, per-client, upstream domain and HTTPS domain tables, storage, request counts and network addresses](images/dashboard.png)
+![The full CacheParty dashboard during a Steam download, with the Steam games downloaded (names, pictures and Purge links), per-client, upstream domain and HTTPS domain tables, storage, request counts and network addresses](images/dashboard.png)
 
 Bytes are counted as they move rather than when a request ends, so a long
 download shows as steady throughput, not a spike at the end. "From the
@@ -29,6 +29,51 @@ services are broken down by CDN host, which often separates games too
 (`lol.dyn.riotcdn.net`, `valorant.dyn.riotcdn.net`). Up to 500 are listed
 per service. With `DASHBOARD_PASSWORD` set, each can be purged from the cache
 from there (see [Cache repair](cache-repair.md#purging-a-game)).
+
+### Game names
+
+Game names are on by default. Set `GAME_NAMES=false`, or turn it off in the
+dashboard's settings, to show bare IDs instead. With it on, CacheParty
+downloads the Steam name map (see below) on first start, so a network without
+internet access keeps Steam IDs bare:
+
+- **Blizzard** product codes (`wow`, `fenris`, …) are named from a list built
+  into CacheParty.
+- **Epic** keeps its build names. Most are internal IDs, and Epic only
+  names them for a signed-in account.
+- **Steam** depots are named from
+  [lancache-pics](https://github.com/regix1/lancache-pics), a map of each
+  depot to the game that owns it, built from Steam's own metadata. CacheParty
+  downloads it from GitHub (about 60 MB, through `UPSTREAM_DNS`, not limited
+  by `UPSTREAM_RATE_LIMIT`, so it never slows game downloads), checks its
+  SHA-256, and checks for a new release once a day. It keeps a small copy
+  (about 2 MB) in `GAME_NAMES_FILE`, so a restart does not download it again.
+  The map is read a depot at a time and takes about 3 MB of memory once
+  loaded.
+
+With `GROUP_STEAM_DEPOTS` on (the default), the depots of one Steam game
+become one row. Its traffic is the sum of its depots, and it links to the game
+on SteamDB. Its **Purge** link removes all of its cached depots at once,
+including ones not listed under it. Click
+**N depots** to list the depots under it; each depot can still be purged on
+its own. A game seen through only one depot keeps its depot
+row.
+
+Depots the map does not know, such as a game released since the last
+release, stay as numbers. Names are for display only: traffic totals,
+`STATS_FILE`, cache tags and purges keep using the IDs, so turning names on or
+off changes nothing else.
+
+#### Game pictures
+
+Set `GAME_PICTURES=true` as well, or turn it on in the dashboard's settings, to
+show Steam's picture of each Steam game next to its name. It needs game names
+on, and is off by default because of what it tells Valve: each browser viewing
+the dashboard loads the pictures straight from Steam's servers
+(`shared.akamai.steamstatic.com`), so Valve and its CDN see which games were
+downloaded through the cache, and from which address. CacheParty itself never
+fetches them. With it off, the page asks Steam for nothing. On a network
+without internet access the pictures stay blank.
 
 ### Clients and upstream domains
 

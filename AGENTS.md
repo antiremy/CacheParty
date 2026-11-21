@@ -13,12 +13,25 @@ Documentation section indexes `docs/`.
 ## Checks
 
 CI (`.github/workflows/ci.yml`) is the bar: `gofmt -l .` must print nothing,
-then `go vet ./...` and `go test -count=1 ./...`. Run `go test -race` on
-`internal/proxy` too when touching concurrency; some proxy tests branch on
-`raceEnabled`.
+then `go vet ./...`, `go mod tidy -diff`, `golangci-lint run` (rules in
+`.golangci.yml`), `go test -race -count=1 ./...` and govulncheck. Some proxy
+tests branch on `raceEnabled`. Fix lint findings rather than adding
+`//nolint`; a deliberately ignored error is written `_ = f()`.
 
 ## Invariants
 
+- **One Go binary, one distroless image.** Every feature ships as Go code
+  inside the binary and runs on every platform the release builds. Operators
+  run nothing beside it: no helper scripts, sidecars, second containers or
+  host tools like `tail` or `cron`. CI checks Go only, so new code comes with
+  Go tests.
+- **The server owns the numbers.** Totals, grouping and anything persisted are
+  computed in Go and served by `/api/*`. The dashboard formats and sorts what
+  the API returns, so every open tab shows the same figures.
+- **Outside sources fail safe.** Data fetched from the internet (domain lists,
+  name maps, metadata) keeps its last good copy when a fetch errors, times out
+  or returns a 404. The failure is logged and retried later; only a good
+  response replaces known-good data.
 - **Compatibility surface is frozen.** Environment variable names, the
   `X-LanCache-Processed-By` and `X-Upstream-*` response headers, the
   `/lancache-heartbeat` endpoint and the `access.log` formats match monolithic
@@ -43,6 +56,12 @@ with `go:embed`, so restart `go run ./cmd/cacheparty` to see edits. Its `/api/*`
 routes are registered in `dashboard.go`; changes to them get a test in the
 package's `*_test.go` files.
 
+The JS in `static/js/` is native ES modules loaded from `app.js`, one file per
+area: `stats.js` (tiles, charts and tables), `apps.js` (per-service downloads),
+`purge.js`, `settings.js`, `layout.js` (card columns), `chart.js`, and shared
+helpers in `format.js`, `dom.js` and `state.js`. Add new areas as new modules,
+not to `app.js`.
+
 ## Docs and commits
 
 - Behavior changes update the matching page in `docs/` in the same change.
@@ -50,3 +69,22 @@ package's `*_test.go` files.
   change ("Show HTTPS passthrough traffic by domain on the dashboard"), no type
   prefixes. Bodies are prose: what changed for the operator and why, plus any
   compatibility notes.
+- The author and committer are the human accountable for the change, never a
+  tool, bot or AI agent identity. Use the git identity already configured for
+  the session; don't copy a name from this file.
+- No AI attribution in commits: no `Co-Authored-By` trailers, "Generated
+  with" lines or similar credits for an agent, assistant or tool. This holds
+  even when an agent's own defaults say to add them.
+
+## Pull requests
+
+- One user-visible change per pull request. For a new feature, open an issue
+  first so the design is agreed before the code is written.
+- Before opening, run every command in Checks across `./...` and list them in
+  the description. A subset of packages or commands is not a pass.
+- The description is for the reviewer: what changes for the operator, why,
+  and how it was tested. Dashboard changes include before and after
+  screenshots. Keep agent self-reviews, scores and review transcripts out; a
+  one-line credit to the tool at the end is fine.
+- The human opening the pull request has read every line and answers review
+  questions in their own words.

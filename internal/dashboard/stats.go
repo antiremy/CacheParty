@@ -95,10 +95,15 @@ func (t *Traffic) save(path string, last func(flowKey) time.Time) error {
 	if err != nil {
 		return err
 	}
+	return writeFileAtomic(path, b)
+}
+
+// writeFileAtomic replaces path with b, so a crash never leaves half a file.
+func writeFileAtomic(path string, b []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".stats-*")
+	tmp, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+"-*")
 	if err != nil {
 		return err
 	}

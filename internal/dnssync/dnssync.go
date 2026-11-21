@@ -250,7 +250,7 @@ func (m *Manager) PutTarget(in TargetInput) (string, error) {
 		t.Secret = in.Secret
 	}
 	if t.Kind == Technitium && t.Secret == "" {
-		return "", errors.New("Technitium needs an API token")
+		return "", errors.New("a Technitium API token is required")
 	}
 	return t.ID, m.save(next)
 }

@@ -330,6 +330,8 @@ func (e *env) putApp(t *testing.T, name, app string, chunks int) (store.Key, []s
 	return obj, keys
 }
 
+func is(app string) func(string) bool { return func(a string) bool { return a == app } }
+
 func TestPurgeRemovesOnlyThatAppsChunks(t *testing.T) {
 	e := newEnv(t)
 	_, a1 := e.putApp(t, "/depot/1/chunk/a", "steam/depot/1", 3)
@@ -340,14 +342,14 @@ func TestPurgeRemovesOnlyThatAppsChunks(t *testing.T) {
 	ev := e.evictor(Config{})
 
 	want := PurgeResult{Objects: 2, Chunks: 4, Bytes: 4 * slice}
-	if got := ev.Purge("steam/depot/1", true); got != want {
+	if got := ev.Purge(is("steam/depot/1"), true); got != want {
 		t.Fatalf("dry run = %+v, want %+v", got, want)
 	}
 	if n, _ := e.st.Usage(); n != 7 {
 		t.Fatalf("dry run removed chunks: %d left", n)
 	}
 
-	if got := ev.Purge("steam/depot/1", false); got != want {
+	if got := ev.Purge(is("steam/depot/1"), false); got != want {
 		t.Fatalf("purge = %+v, want %+v", got, want)
 	}
 	for _, k := range append(a1, a2[0]) {
@@ -360,11 +362,11 @@ func TestPurgeRemovesOnlyThatAppsChunks(t *testing.T) {
 			t.Error("chunk of another app was removed")
 		}
 	}
-	if got := ev.Purge("steam/depot/1", false); got != (PurgeResult{}) {
+	if got := ev.Purge(is("steam/depot/1"), false); got != (PurgeResult{}) {
 		t.Errorf("second purge = %+v", got)
 	}
-	if got := ev.Purge("", false); got != (PurgeResult{}) {
-		t.Errorf("purging the empty app = %+v", got)
+	if got := ev.Purge(func(string) bool { return true }, true); got.Objects != 1 {
+		t.Errorf("match-all purge reached %d objects, want only the tagged one", got.Objects)
 	}
 
 	// The metadata goes the way of any emptied object: two sweeps later.

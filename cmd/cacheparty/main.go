@@ -126,6 +126,7 @@ func run() error {
 	limiter := ratelimit.New(cfg.RateLimit)
 	dialer := limitedResolver{res, limiter}
 	up := upstream.New(dialer, upstream.Options{})
+	namesClient := upstream.New(res, upstream.Options{}).HTTPClient()
 
 	matcher, err := loadDomains(cfg, up, log)
 	if err != nil {
@@ -268,16 +269,17 @@ func run() error {
 			Verify: func(ctx context.Context, dryRun bool) (store.ScrubResult, error) {
 				return chunks.Scrub(ctx, store.ScrubOptions{MinAge: time.Hour, DryRun: dryRun})
 			},
-			Purge:   evictor.Purge,
-			DNSSync: dnsSync,
-			Log:     log,
+			Purge:      evictor.Purge,
+			DNSSync:    dnsSync,
+			HTTPClient: namesClient,
+			Log:        log,
 		})
 		go dash.Run(ctx)
 		mux.Handle("/", dash)
 		mux.Handle("/metrics", reg.Handler())
 		mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "text/plain")
-			io.WriteString(w, "ok\n")
+			_, _ = io.WriteString(w, "ok\n")
 		})
 		metricsSrv = &http.Server{Addr: cfg.MetricsAddr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 		go func() { errc <- metricsSrv.ListenAndServe() }()

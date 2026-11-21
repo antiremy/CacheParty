@@ -1,10 +1,10 @@
 module cacheparty
 
-go 1.24
+go 1.27
 
 require (
-	go.etcd.io/bbolt v1.3.11
-	golang.org/x/sync v0.10.0
+	go.etcd.io/bbolt v1.5.0
+	golang.org/x/sync v0.25.0
 )
 
-require golang.org/x/sys v0.4.0 // indirect
+require golang.org/x/sys v0.50.0 // indirect

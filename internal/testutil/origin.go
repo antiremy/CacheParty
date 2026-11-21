@@ -53,7 +53,7 @@ func NewOrigin(t testing.TB) *Origin {
 	t.Helper()
 	o := &Origin{objs: map[string]*Obj{}}
 	o.Server = httptest.NewServer(http.HandlerFunc(o.serve))
-	t.Cleanup(o.Server.Close)
+	t.Cleanup(o.Close)
 	return o
 }
 
@@ -162,7 +162,7 @@ func (o *Origin) serve(w http.ResponseWriter, r *http.Request) {
 		}
 		w.WriteHeader(http.StatusOK)
 		if r.Method != http.MethodHead {
-			w.Write(obj.Body)
+			_, _ = w.Write(obj.Body)
 		}
 		return
 	}
