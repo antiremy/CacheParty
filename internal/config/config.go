@@ -40,6 +40,7 @@ type Config struct {
 
 	SettingsFile      string // SETTINGS_FILE: values saved from the dashboard
 	StatsFile         string // STATS_FILE: dashboard traffic totals kept across restarts; "" disables it
+	DNSSyncFile       string // DNS_SYNC_FILE: DNS servers the dashboard syncs cache-domains to; "" disables it
 	DashboardPassword string // DASHBOARD_PASSWORD; "" makes the dashboard read-only
 }
 
@@ -69,6 +70,7 @@ var Defaults = map[string]string{
 	"GAME_NAMES_FILE":      "/data/game-names.json",
 	"SETTINGS_FILE":        "/data/settings.json",
 	"STATS_FILE":           "/data/stats.json",
+	"DNS_SYNC_FILE":        "/data/dns-sync.json",
 	"DASHBOARD_PASSWORD":   "",
 }
 
@@ -130,6 +132,7 @@ func Load(getenv func(string) string) (*Config, error) {
 	c.GameNamesFile = listenAddr(get("GAME_NAMES_FILE")) // "off" disables it
 	c.SettingsFile = get("SETTINGS_FILE")
 	c.StatsFile = listenAddr(get("STATS_FILE")) // "off" disables it
+	c.DNSSyncFile = listenAddr(get("DNS_SYNC_FILE"))
 	c.DashboardPassword = get("DASHBOARD_PASSWORD")
 	return &c, nil
 }

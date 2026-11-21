@@ -153,6 +153,27 @@ func writeTree(t *testing.T, dir string, files map[string]string) {
 	}
 }
 
+func TestPatterns(t *testing.T) {
+	got := testMatcher(t).Patterns()
+	want := []Pattern{
+		{"blizzard", "*.blizzard.com"},
+		{"blizzard", "*.cdn.blizzard.com"},
+		{"blizzard", "dist.blizzard.com"},
+		{"epic", "*.epicgames.com"},
+		{"special", "eu.cdn.blizzard.com"},
+		{"steam", "*.steamcontent.com"},
+		{"steam", "lancache.steamcontent.com"},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %v", got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("pattern %d = %v, want %v (all: %v)", i, got[i], want[i], got)
+		}
+	}
+}
+
 func TestLoadDir(t *testing.T) {
 	dir := t.TempDir()
 	writeTree(t, dir, map[string]string{

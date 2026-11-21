@@ -8,6 +8,7 @@ package domains
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -151,4 +152,39 @@ func countWild(n *node) int {
 		c += countWild(ch)
 	}
 	return c
+}
+
+// Pattern is one registered hostname pattern and the list it came from.
+type Pattern struct {
+	Service string
+	Pattern string // "host" or "*.suffix"
+}
+
+// Patterns lists every registered pattern, sorted by service then pattern.
+func (m *Matcher) Patterns() []Pattern {
+	var out []Pattern
+	for host, name := range m.exact {
+		out = append(out, Pattern{name, host})
+	}
+	var walk func(n *node, suffix string)
+	walk = func(n *node, suffix string) {
+		if n.hasWild {
+			out = append(out, Pattern{n.wild, "*." + suffix})
+		}
+		for label, ch := range n.children {
+			if suffix == "" {
+				walk(ch, label)
+			} else {
+				walk(ch, label+"."+suffix)
+			}
+		}
+	}
+	walk(m.root, "")
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Service != out[j].Service {
+			return out[i].Service < out[j].Service
+		}
+		return out[i].Pattern < out[j].Pattern
+	})
+	return out
 }

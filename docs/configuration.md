@@ -29,6 +29,7 @@ defaults as lancachenet/monolithic, plus a few additions (marked "added").
 | `GAME_NAMES_FILE`      | `/data/game-names.json`                       | Where the Steam names are kept across restarts; `off` keeps them in memory only (added)                                 |
 | `SETTINGS_FILE`        | `/data/settings.json`                         | Where settings changed from the dashboard are saved (added)                                                             |
 | `STATS_FILE`           | `/data/stats.json`                            | Where the dashboard's traffic totals are kept across restarts; `off` keeps them in memory only (added)                  |
+| `DNS_SYNC_FILE`        | `/data/dns-sync.json`                         | DNS servers to sync cache-domains to, with their passwords; `off` disables [DNS sync](monitoring.md#dns-sync) (added)   |
 | `DASHBOARD_PASSWORD`   | (empty)                                       | Password for settings changes, `verify` and `purge`; empty makes them read-only (added)                                 |
 
 ## Live settings

@@ -1,7 +1,7 @@
 // Package dashboard serves a web page on the metrics listener showing live
 // throughput, per-service and per-game traffic and cache usage, and lets an operator
-// change the settings that can be applied without a restart, check the cache
-// and purge a game from it.
+// change the settings that can be applied without a restart, check the cache,
+// purge a game from it and sync cache-domains to a LAN DNS server.
 //
 // Reading is open, like /metrics. Changing settings or the cache needs
 // DASHBOARD_PASSWORD, sent as a bearer token; without one both are
@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"cacheparty/internal/config"
+	"cacheparty/internal/dnssync"
 	"cacheparty/internal/evict"
 	"cacheparty/internal/store"
 )
@@ -78,6 +79,10 @@ type Config struct {
 	// never downloads them.
 	HTTPClient *http.Client
 
+	// DNSSync publishes cache-domains to LAN DNS servers; nil turns the
+	// DNS page off.
+	DNSSync *dnssync.Manager
+
 	Log *slog.Logger
 }
 
@@ -117,6 +122,11 @@ func New(cfg Config) *Dashboard {
 	d.mux.HandleFunc("PUT /api/settings", d.updateSettings)
 	d.mux.HandleFunc("POST /api/cache/verify", d.verifyCache)
 	d.mux.HandleFunc("POST /api/cache/purge", d.purgeApp)
+	d.mux.HandleFunc("GET /api/dns", d.serveDNS)
+	d.mux.HandleFunc("PUT /api/dns", d.updateDNS)
+	d.mux.HandleFunc("POST /api/dns/servers", d.putDNSServer)
+	d.mux.HandleFunc("DELETE /api/dns/servers/{id}", d.deleteDNSServer)
+	d.mux.HandleFunc("POST /api/dns/servers/{id}/sync", d.syncDNSServer)
 	return d
 }
 
@@ -506,6 +516,7 @@ var settingInfo = []struct{ Key, Label, Help string }{
 	{"SETTINGS_FILE", "Settings file", ""},
 	{"GAME_NAMES_FILE", "Game names file", "Where the downloaded Steam names are kept, so a restart does not download them again; off keeps them in memory only."},
 	{"STATS_FILE", "Traffic totals file", "Where the dashboard's totals are kept across restarts; off keeps them in memory only."},
+	{"DNS_SYNC_FILE", "DNS sync file", "Where the DNS servers to sync cache-domains to are kept, with their passwords; off disables DNS sync."},
 }
 
 type settingJSON struct {

@@ -21,6 +21,7 @@ import (
 	"cacheparty/internal/accesslog"
 	"cacheparty/internal/config"
 	"cacheparty/internal/dashboard"
+	"cacheparty/internal/dnssync"
 	"cacheparty/internal/domains"
 	"cacheparty/internal/evict"
 	"cacheparty/internal/metrics"
@@ -234,6 +235,16 @@ func run() error {
 		go func() { errc <- sniSrv.Serve(ln) }()
 	}
 
+	var dnsSync *dnssync.Manager
+	if cfg.DNSSyncFile != "" && cfg.MetricsAddr != "" {
+		if dnsSync, err = dnssync.Open(cfg.DNSSyncFile, matcher.Patterns(), log); err != nil {
+			// Not fatal: the cache works without it.
+			log.Warn("DNS sync disabled: could not read its file", "file", cfg.DNSSyncFile, "err", err)
+		} else {
+			go dnsSync.Run(ctx)
+		}
+	}
+
 	var metricsSrv *http.Server
 	var dash *dashboard.Dashboard
 	if cfg.MetricsAddr != "" {
@@ -259,6 +270,7 @@ func run() error {
 				return chunks.Scrub(ctx, store.ScrubOptions{MinAge: time.Hour, DryRun: dryRun})
 			},
 			Purge:      evictor.Purge,
+			DNSSync:    dnsSync,
 			HTTPClient: namesClient,
 			Log:        log,
 		})
